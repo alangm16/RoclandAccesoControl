@@ -1,0 +1,83 @@
+@page "/Acceso/Confirmacion"
+@model RoclandAccesoControl.Web.Pages.Acceso.ConfirmacionModel
+@{
+    ViewData["Title"] = "Solicitud Enviada";
+    Layout = "~/Pages/Shared/_AccesoLayout.cshtml";
+}
+
+<div class="confirm-page fade-in">
+
+    <div class="confirm-icon">
+        <i class="bi bi-check-lg"></i>
+    </div>
+
+    <h1 class="confirm-title">¡Solicitud Enviada!</h1>
+    <p class="confirm-subtitle">
+        Tu registro fue recibido. El guardia de seguridad revisará
+        tu solicitud en breve.
+    </p>
+
+    <!-- ── Indicador de espera ─────────────────────────────────── -->
+    <div class="waiting-animation" aria-hidden="true">
+        <div class="waiting-dot"></div>
+        <div class="waiting-dot"></div>
+        <div class="waiting-dot"></div>
+    </div>
+
+    <!-- ── Detalle del registro ────────────────────────────────── -->
+    <div class="confirm-detail-box" id="detailBox">
+        <div class="confirm-detail-row">
+            <span class="confirm-detail-label">Nombre</span>
+            <span class="confirm-detail-value" id="detNombre">—</span>
+        </div>
+        <div class="confirm-detail-row">
+            <span class="confirm-detail-label">Tipo</span>
+            <span class="confirm-detail-value" id="detTipo">—</span>
+        </div>
+        <div class="confirm-detail-row">
+            <span class="confirm-detail-label">Folio</span>
+            <span class="confirm-detail-value" id="detFolio">—</span>
+        </div>
+        <div class="confirm-detail-row">
+            <span class="confirm-detail-label">Estado</span>
+            <span class="confirm-detail-value">
+                <span class="status-badge status-pendiente">
+                    <i class="bi bi-clock-fill"></i> Pendiente
+                </span>
+            </span>
+        </div>
+        <div class="confirm-detail-row">
+            <span class="confirm-detail-label">Hora</span>
+            <span class="confirm-detail-value" id="detHora">—</span>
+        </div>
+    </div>
+
+    <p style="font-size:0.82rem; color: var(--rocland-gray); max-width:360px; margin-bottom:1.25rem; text-align:center;">
+        <i class="bi bi-info-circle me-1"></i>
+        Permanece en recepción. El guardia te indicará cuando tu
+        acceso haya sido autorizado.
+    </p>
+
+    <a href="/Acceso" class="btn-back-home">
+        <i class="bi bi-house-door"></i> Nuevo registro
+    </a>
+
+</div>
+
+@section Scripts {
+<script>
+    // Recuperar datos del sessionStorage (guardados por el form JS)
+    (function () {
+        const data = sessionStorage.getItem('rocland_confirm');
+        if (!data) return;
+        try {
+            const d = JSON.parse(data);
+            document.getElementById('detNombre').textContent = d.nombre  || '—';
+            document.getElementById('detTipo').textContent   = d.tipo    || '—';
+            document.getElementById('detFolio').textContent  = '#' + (d.id || '—');
+            document.getElementById('detHora').textContent   = d.hora    || '—';
+            sessionStorage.removeItem('rocland_confirm');
+        } catch { /* no-op */ }
+    })();
+</script>
+}

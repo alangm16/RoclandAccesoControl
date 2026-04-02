@@ -1,8 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RoclandAccesoControl.Web.Models.DTOs;
 using RoclandAccesoControl.Web.Services.Interfaces;
 
 namespace RoclandAccesoControl.Web.Controllers;
+
+// ── Actualización de ProveedoresController con Rate Limiting ─────────
+// Reemplaza el archivo existente Controllers/ProveedoresController.cs
 
 [ApiController]
 [Route("api/[controller]")]
@@ -12,8 +16,13 @@ public class ProveedoresController : ControllerBase
     public ProveedoresController(IAccesoService acceso) => _acceso = acceso;
 
     [HttpPost]
-    public async Task<IActionResult> Registrar(CrearProveedorRequest request)
+    [EnableRateLimiting("FormSubmissionLimit")]
+    public async Task<IActionResult> Registrar(
+        [FromBody] CrearProveedorRequest request)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
         if (!request.ConsentimientoFirmado)
             return BadRequest("El consentimiento es obligatorio.");
 

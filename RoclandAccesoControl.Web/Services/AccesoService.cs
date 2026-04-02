@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RoclandAccesoControl.Web.Data;
 using RoclandAccesoControl.Web.Hubs;
@@ -12,346 +12,263 @@ public class AccesoService : IAccesoService
 {
     private readonly RoclandDbContext _db;
     private readonly IHubContext<AccesoHub> _hub;
-    private readonly IConfiguration _config;
+    private readonly ILogger<AccesoService> _logger;
 
-    public AccesoService(RoclandDbContext db, IHubContext<AccesoHub> hub, IConfiguration config)
+    public AccesoService(
+        RoclandDbContext db,
+        IHubContext<AccesoHub> hub,
+        ILogger<AccesoService> logger)
     {
-        _db = db;
-        _hub = hub;
-        _config = config;
+        _db     = db;
+        _hub    = hub;
+        _logger = logger;
     }
 
-    // ── Buscar persona por número de identificación ────────────────────
-    public async Task<PersonaBusquedaResponse?> BuscarPersonaAsync(string numeroId)
+    // ── Buscar persona por número de identificación ─────────────────
+    public async Task<PersonaBusquedaResponse?> BuscarPersonaAsync(string numId)
     {
         var persona = await _db.Personas
             .Include(p => p.TipoIdentificacion)
-            .Where(p => p.NumeroIdentificacion.Contains(numeroId) && p.Activo)
+            .Where(p => p.Activo && p.NumeroIdentificacion.Contains(numId))
+            .OrderByDescending(p => p.TotalVisitas)
             .FirstOrDefaultAsync();
 
         if (persona is null) return null;
 
-        return new PersonaBusquedaResponse(
-            persona.Id,
-            persona.Nombre,
-            persona.TipoIdentificacion.Nombre,
-            persona.NumeroIdentificacion,
-            persona.Empresa,
-            persona.Telefono,
-            persona.Email,
-            persona.TotalVisitas,
-            persona.FechaUltimaVisita
-        );
+        return new PersonaBusquedaResponse
+        {
+            Id                   = persona.Id,
+            Nombre               = persona.Nombre,
+            TipoId               = persona.TipoIdentificacion?.Nombre ?? string.Empty,
+            TipoIdentificacionId = persona.TipoIdentificacionId,
+            NumeroIdentificacion = persona.NumeroIdentificacion,
+            Empresa              = persona.Empresa,
+            Telefono             = persona.Telefono,
+            Email                = persona.Email,
+            TotalVisitas         = persona.TotalVisitas,
+            FechaUltimaVisita    = persona.FechaUltimaVisita,
+        };
     }
 
-    // ── Registrar visitante ────────────────────────────────────────────
+    // ── Registrar visitante ─────────────────────────────────────────
     public async Task<VisitanteResponse> RegistrarVisitanteAsync(
-        CrearVisitanteRequest request, string ipSolicitud)
+        CrearVisitanteRequest req, string ip)
     {
-        // Obtener o crear la persona
+        // 1. Obtener o crear perfil de persona
         var persona = await ObtenerOCrearPersonaAsync(
-            request.TipoIdentificacionId,
-            request.NumeroIdentificacion,
-            request.Nombre,
-            null, request.Telefono, request.Email);
+            req.TipoIdentificacionId,
+            req.NumeroIdentificacion,
+            req.Nombre,
+            req.Empresa,
+            req.Telefono,
+            req.Email);
 
-        // Guardia de sistema para solicitudes desde formulario web
-        // (se asigna el Id del primer guardia activo como placeholder;
-        //  el guardia real queda registrado al aprobar)
-        var guardiaDefault = await _db.Guardias.FirstAsync(g => g.Activo);
-
+        // 2. Crear registro de visitante
+        // GuardiaEntradaId = 1 (guardia sistema/pendiente).
+        // La aprobación real la hace el guardia desde la app móvil.
         var registro = new RegistroVisitante
         {
-            PersonaId = persona.Id,
-            AreaId = request.AreaId,
-            MotivoId = request.MotivoId,
-            FechaEntrada = DateTime.UtcNow,
-            GuardiaEntradaId = guardiaDefault.Id,
-            EstadoAcceso = "Pendiente",
-            ConsentimientoFirmado = request.ConsentimientoFirmado,
-            Observaciones = request.Observaciones,
-            IPSolicitud = ipSolicitud
+            PersonaId             = persona.Id,
+            AreaId                = req.AreaId,
+            MotivoId              = req.MotivoId,
+            FechaEntrada          = DateTime.Now,
+            GuardiaEntradaId      = 1,               // pendiente de asignación por guardia
+            EstadoAcceso          = "Pendiente",
+            ConsentimientoFirmado = req.ConsentimientoFirmado,
+            Observaciones         = req.Observaciones,
+            IPSolicitud           = ip,
+            FechaCreacion         = DateTime.Now,
         };
 
         _db.RegistrosVisitantes.Add(registro);
+
+        // 3. Crear solicitud pendiente para SignalR
+        var solicitud = new SolicitudPendiente
+        {
+            TipoRegistro  = "Visitante",
+            RegistroId    = 0,     // se actualiza tras SaveChanges
+            PersonaId     = persona.Id,
+            FechaSolicitud = DateTime.Now,
+            Estado        = "Pendiente",
+        };
+        _db.SolicitudesPendientes.Add(solicitud);
+
         await _db.SaveChangesAsync();
 
-        // Crear solicitud pendiente para SignalR
-        var solicitud = await CrearSolicitudPendienteAsync("Visitante", registro.Id, persona.Id);
+        // Actualizar RegistroId ahora que tenemos el Id
+        solicitud.RegistroId = registro.Id;
+        await _db.SaveChangesAsync();
 
-        // Notificar a guardias vía SignalR
-        var area = await _db.Areas.FindAsync(request.AreaId);
-        var motivo = await _db.MotivosVisita.FindAsync(request.MotivoId);
+        // 4. Actualizar contadores de visita
+        await ActualizarContadorAsync(persona.Id);
 
-        await _hub.Clients.Group("Guardias").SendAsync("NuevaSolicitud",
-            new NuevaSolicitudEvent(
-                solicitud.Id, registro.Id, "Visitante",
-                persona.Nombre, null, persona.NumeroIdentificacion,
-                persona.TipoIdentificacion!.Nombre,
-                motivo!.Nombre, area!.Nombre,
-                solicitud.FechaSolicitud));
+        // 5. Notificar a guardias vía SignalR
+        await _hub.Clients.All.SendAsync("NuevaSolicitud", new
+        {
+            solicitudId  = solicitud.Id,
+            tipo         = "Visitante",
+            registroId   = registro.Id,
+            personaId    = persona.Id,
+            nombre       = persona.Nombre,
+            empresa      = persona.Empresa,
+            numId        = persona.NumeroIdentificacion,
+            motivo       = req.MotivoId,
+            hora         = registro.FechaEntrada.ToString("HH:mm"),
+        });
 
-        return new VisitanteResponse(
-            registro.Id, persona.Id, persona.Nombre,
-            area!.Nombre, motivo!.Nombre, registro.EstadoAcceso, registro.FechaEntrada);
+        _logger.LogInformation(
+            "Visitante registrado: PersonaId={PersonaId}, RegistroId={RegistroId}",
+            persona.Id, registro.Id);
+
+        // 6. Obtener nombres para la respuesta
+        var area   = await _db.Areas.FindAsync(req.AreaId);
+        var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
+
+        return new VisitanteResponse
+        {
+            Id           = registro.Id,
+            PersonaId    = persona.Id,
+            Nombre       = persona.Nombre,
+            Area         = area?.Nombre   ?? string.Empty,
+            Motivo       = motivo?.Nombre ?? string.Empty,
+            EstadoAcceso = registro.EstadoAcceso,
+            FechaEntrada = registro.FechaEntrada,
+            Mensaje      = "Solicitud recibida. Espera autorización del guardia.",
+        };
     }
 
-    // ── Registrar proveedor ────────────────────────────────────────────
+    // ── Registrar proveedor ─────────────────────────────────────────
     public async Task<ProveedorResponse> RegistrarProveedorAsync(
-        CrearProveedorRequest request, string ipSolicitud)
+        CrearProveedorRequest req, string ip)
     {
         var persona = await ObtenerOCrearPersonaAsync(
-            request.TipoIdentificacionId,
-            request.NumeroIdentificacion,
-            request.Nombre,
-            request.Empresa, request.Telefono, request.Email);
-
-        var guardiaDefault = await _db.Guardias.FirstAsync(g => g.Activo);
+            req.TipoIdentificacionId,
+            req.NumeroIdentificacion,
+            req.Nombre,
+            req.Empresa,
+            req.Telefono,
+            req.Email);
 
         var registro = new RegistroProveedor
         {
-            PersonaId = persona.Id,
-            MotivoId = request.MotivoId,
-            FechaEntrada = DateTime.UtcNow,
-            UnidadPlacas = request.UnidadPlacas,
-            FacturaRemision = request.FacturaRemision,
-            GuardiaEntradaId = guardiaDefault.Id,
-            EstadoAcceso = "Pendiente",
-            ConsentimientoFirmado = request.ConsentimientoFirmado,
-            Observaciones = request.Observaciones,
-            IPSolicitud = ipSolicitud
+            PersonaId             = persona.Id,
+            MotivoId              = req.MotivoId,
+            FechaEntrada          = DateTime.Now,
+            UnidadPlacas          = req.UnidadPlacas,
+            FacturaRemision       = req.FacturaRemision,
+            GuardiaEntradaId      = 1,
+            EstadoAcceso          = "Pendiente",
+            ConsentimientoFirmado = req.ConsentimientoFirmado,
+            Observaciones         = req.Observaciones,
+            IPSolicitud           = ip,
+            FechaCreacion         = DateTime.Now,
         };
 
         _db.RegistrosProveedores.Add(registro);
-        await _db.SaveChangesAsync();
 
-        var solicitud = await CrearSolicitudPendienteAsync("Proveedor", registro.Id, persona.Id);
-        var motivo = await _db.MotivosVisita.FindAsync(request.MotivoId);
-
-        await _hub.Clients.Group("Guardias").SendAsync("NuevaSolicitud",
-            new NuevaSolicitudEvent(
-                solicitud.Id, registro.Id, "Proveedor",
-                persona.Nombre, persona.Empresa, persona.NumeroIdentificacion,
-                persona.TipoIdentificacion!.Nombre,
-                motivo!.Nombre, null,
-                solicitud.FechaSolicitud));
-
-        return new ProveedorResponse(
-            registro.Id, persona.Id, persona.Nombre,
-            persona.Empresa!, motivo!.Nombre, registro.EstadoAcceso, registro.FechaEntrada);
-    }
-
-    // ── Aprobar solicitud ──────────────────────────────────────────────
-    public async Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request)
-    {
-        var solicitud = await _db.SolicitudesPendientes
-            .FindAsync(request.SolicitudId);
-        if (solicitud is null || solicitud.Estado != "Pendiente") return false;
-
-        solicitud.Estado = "Aprobado";
-        solicitud.GuardiaId = request.GuardiaId;
-
-        // Actualizar el registro correspondiente
-        if (solicitud.TipoRegistro == "Visitante")
+        var solicitud = new SolicitudPendiente
         {
-            var reg = await _db.RegistrosVisitantes.FindAsync(solicitud.RegistroId);
-            if (reg is null) return false;
-            reg.EstadoAcceso = "Aprobado";
-            reg.NumeroGafete = request.NumeroGafete;
-            reg.GuardiaEntradaId = request.GuardiaId;
-        }
-        else
-        {
-            var reg = await _db.RegistrosProveedores.FindAsync(solicitud.RegistroId);
-            if (reg is null) return false;
-            reg.EstadoAcceso = "Aprobado";
-            reg.NumeroGafete = request.NumeroGafete;
-            reg.GuardiaEntradaId = request.GuardiaId;
-        }
-
-        // Actualizar contador de visitas de la persona
-        var persona = await _db.Personas.FindAsync(solicitud.PersonaId);
-        if (persona is not null)
-        {
-            persona.TotalVisitas++;
-            persona.FechaUltimaVisita = DateTime.UtcNow;
-        }
+            TipoRegistro   = "Proveedor",
+            RegistroId     = 0,
+            PersonaId      = persona.Id,
+            FechaSolicitud = DateTime.Now,
+            Estado         = "Pendiente",
+        };
+        _db.SolicitudesPendientes.Add(solicitud);
 
         await _db.SaveChangesAsync();
 
-        var guardia = await _db.Guardias.FindAsync(request.GuardiaId);
-        await _hub.Clients.Group("Guardias").SendAsync("SolicitudResuelta",
-            new SolicitudResueltaEvent(request.SolicitudId, "Aprobado", guardia?.Nombre ?? ""));
-
-        return true;
-    }
-
-    // ── Rechazar solicitud ─────────────────────────────────────────────
-    public async Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request)
-    {
-        var solicitud = await _db.SolicitudesPendientes
-            .FindAsync(request.SolicitudId);
-        if (solicitud is null || solicitud.Estado != "Pendiente") return false;
-
-        solicitud.Estado = "Rechazado";
-        solicitud.GuardiaId = request.GuardiaId;
-
-        if (solicitud.TipoRegistro == "Visitante")
-        {
-            var reg = await _db.RegistrosVisitantes.FindAsync(solicitud.RegistroId);
-            if (reg is not null) reg.EstadoAcceso = "Rechazado";
-        }
-        else
-        {
-            var reg = await _db.RegistrosProveedores.FindAsync(solicitud.RegistroId);
-            if (reg is not null) reg.EstadoAcceso = "Rechazado";
-        }
-
+        solicitud.RegistroId = registro.Id;
         await _db.SaveChangesAsync();
 
-        var guardia = await _db.Guardias.FindAsync(request.GuardiaId);
-        await _hub.Clients.Group("Guardias").SendAsync("SolicitudResuelta",
-            new SolicitudResueltaEvent(request.SolicitudId, "Rechazado", guardia?.Nombre ?? ""));
+        await ActualizarContadorAsync(persona.Id);
 
-        return true;
-    }
-
-    // ── Marcar salida ──────────────────────────────────────────────────
-    public async Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request)
-    {
-        if (request.TipoRegistro == "Visitante")
+        await _hub.Clients.All.SendAsync("NuevaSolicitud", new
         {
-            var reg = await _db.RegistrosVisitantes.FindAsync(request.RegistroId);
-            if (reg is null || reg.FechaSalida is not null) return false;
-            reg.FechaSalida = DateTime.UtcNow;
-            reg.EstadoAcceso = "Salido";
-            reg.GuardiaSalidaId = request.GuardiaId;
-        }
-        else
+            solicitudId = solicitud.Id,
+            tipo        = "Proveedor",
+            registroId  = registro.Id,
+            personaId   = persona.Id,
+            nombre      = persona.Nombre,
+            empresa     = persona.Empresa,
+            numId       = persona.NumeroIdentificacion,
+            placas      = registro.UnidadPlacas,
+            factura     = registro.FacturaRemision,
+            motivo      = req.MotivoId,
+            hora        = registro.FechaEntrada.ToString("HH:mm"),
+        });
+
+        _logger.LogInformation(
+            "Proveedor registrado: PersonaId={PersonaId}, RegistroId={RegistroId}",
+            persona.Id, registro.Id);
+
+        var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
+
+        return new ProveedorResponse
         {
-            var reg = await _db.RegistrosProveedores.FindAsync(request.RegistroId);
-            if (reg is null || reg.FechaSalida is not null) return false;
-            reg.FechaSalida = DateTime.UtcNow;
-            reg.EstadoAcceso = "Salido";
-            reg.GuardiaSalidaId = request.GuardiaId;
-        }
-
-        await _db.SaveChangesAsync();
-        return true;
+            Id           = registro.Id,
+            PersonaId    = persona.Id,
+            Nombre       = persona.Nombre,
+            Empresa      = persona.Empresa ?? string.Empty,
+            Motivo       = motivo?.Nombre  ?? string.Empty,
+            EstadoAcceso = registro.EstadoAcceso,
+            FechaEntrada = registro.FechaEntrada,
+            Mensaje      = "Solicitud recibida. Espera autorización del guardia.",
+        };
     }
 
-    // ── Obtener solicitudes pendientes ─────────────────────────────────
-    public async Task<IEnumerable<SolicitudPendienteResponse>> ObtenerSolicitudesPendientesAsync()
-    {
-        var solicitudes = await _db.SolicitudesPendientes
-            .Include(s => s.Persona)
-                .ThenInclude(p => p.TipoIdentificacion)
-            .Where(s => s.Estado == "Pendiente")
-            .OrderBy(s => s.FechaSolicitud)
-            .ToListAsync();
+    // ── Helpers privados ────────────────────────────────────────────
 
-        var result = new List<SolicitudPendienteResponse>();
-
-        foreach (var s in solicitudes)
-        {
-            string motivo = "", area = "";
-
-            if (s.TipoRegistro == "Visitante")
-            {
-                var reg = await _db.RegistrosVisitantes
-                    .Include(r => r.Motivo)
-                    .Include(r => r.Area)
-                    .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
-                motivo = reg?.Motivo.Nombre ?? "";
-                area = reg?.Area.Nombre ?? "";
-            }
-            else
-            {
-                var reg = await _db.RegistrosProveedores
-                    .Include(r => r.Motivo)
-                    .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
-                motivo = reg?.Motivo.Nombre ?? "";
-            }
-
-            result.Add(new SolicitudPendienteResponse(
-                s.Id, s.RegistroId, s.TipoRegistro,
-                s.PersonaId, s.Persona.Nombre, s.Persona.Empresa,
-                s.Persona.NumeroIdentificacion,
-                s.Persona.TipoIdentificacion.Nombre,
-                motivo, area, s.FechaSolicitud));
-        }
-
-        return result;
-    }
-
-    // ── Obtener accesos activos (personas dentro) ──────────────────────
-    public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync()
-    {
-        var visitantes = await _db.RegistrosVisitantes
-            .Include(r => r.Persona)
-            .Include(r => r.Area)
-            .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
-            .Select(r => new AccesoActivoResponse(
-                r.Id, "Visitante", r.Persona.Nombre, null,
-                r.NumeroGafete ?? "", r.FechaEntrada, r.Area.Nombre))
-            .ToListAsync();
-
-        var proveedores = await _db.RegistrosProveedores
-            .Include(r => r.Persona)
-            .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
-            .Select(r => new AccesoActivoResponse(
-                r.Id, "Proveedor", r.Persona.Nombre, r.Persona.Empresa,
-                r.NumeroGafete ?? "", r.FechaEntrada, ""))
-            .ToListAsync();
-
-        return visitantes.Concat(proveedores).OrderBy(a => a.FechaEntrada);
-    }
-
-    // ── Helpers privados ───────────────────────────────────────────────
+    /// <summary>
+    /// Busca un perfil por TipoId+NumeroId; si no existe, lo crea.
+    /// Si ya existe pero cambió el nombre, actualiza el nombre.
+    /// </summary>
     private async Task<Persona> ObtenerOCrearPersonaAsync(
-        int tipoIdId, string numeroId, string nombre,
+        int tipoId, string numId, string nombre,
         string? empresa, string? telefono, string? email)
     {
         var persona = await _db.Personas
-            .Include(p => p.TipoIdentificacion)
             .FirstOrDefaultAsync(p =>
-                p.TipoIdentificacionId == tipoIdId &&
-                p.NumeroIdentificacion == numeroId);
+                p.TipoIdentificacionId == tipoId &&
+                p.NumeroIdentificacion  == numId);
 
         if (persona is null)
         {
             persona = new Persona
             {
-                Nombre = nombre,
-                TipoIdentificacionId = tipoIdId,
-                NumeroIdentificacion = numeroId,
-                Empresa = empresa,
-                Telefono = telefono,
-                Email = email
+                TipoIdentificacionId = tipoId,
+                NumeroIdentificacion = numId,
+                Nombre               = nombre,
+                Empresa              = empresa,
+                Telefono             = telefono,
+                Email                = email,
+                FechaRegistro        = DateTime.Now,
+                TotalVisitas         = 0,
+                Activo               = true,
             };
             _db.Personas.Add(persona);
             await _db.SaveChangesAsync();
-
-            // Recargar con navegación
-            persona = await _db.Personas
-                .Include(p => p.TipoIdentificacion)
-                .FirstAsync(p => p.Id == persona.Id);
+        }
+        else
+        {
+            // Actualizar datos opcionales si hay cambio
+            bool changed = false;
+            if (persona.Nombre != nombre) { persona.Nombre = nombre; changed = true; }
+            if (empresa  is not null && persona.Empresa  != empresa)  { persona.Empresa  = empresa;  changed = true; }
+            if (telefono is not null && persona.Telefono != telefono) { persona.Telefono = telefono; changed = true; }
+            if (email    is not null && persona.Email    != email)    { persona.Email    = email;    changed = true; }
+            if (changed) await _db.SaveChangesAsync();
         }
 
         return persona;
     }
 
-    private async Task<SolicitudPendiente> CrearSolicitudPendienteAsync(
-        string tipo, int registroId, int personaId)
+    private async Task ActualizarContadorAsync(int personaId)
     {
-        var solicitud = new SolicitudPendiente
-        {
-            TipoRegistro = tipo,
-            RegistroId = registroId,
-            PersonaId = personaId
-        };
-        _db.SolicitudesPendientes.Add(solicitud);
+        var persona = await _db.Personas.FindAsync(personaId);
+        if (persona is null) return;
+        persona.TotalVisitas++;
+        persona.FechaUltimaVisita = DateTime.Now;
         await _db.SaveChangesAsync();
-        return solicitud;
     }
 }

@@ -1,13 +1,23 @@
-﻿namespace RoclandAccesoControl.Web.Models.DTOs;
+namespace RoclandAccesoControl.Web.Models.DTOs;
 
-public record PersonaBusquedaResponse(
-    int Id,
-    string Nombre,
-    string TipoID,
-    string NumeroIdentificacion,
-    string? Empresa,
-    string? Telefono,
-    string? Email,
-    int TotalVisitas,
-    DateTime? FechaUltimaVisita
-);
+// ── Response del autocompletado ───────────────────────────────────────
+public class PersonaBusquedaResponse
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string TipoId { get; set; } = string.Empty;
+    public int TipoIdentificacionId { get; set; }
+    public string NumeroIdentificacion { get; set; } = string.Empty;
+    public string? Empresa { get; set; }
+    public string? Telefono { get; set; }
+    public string? Email { get; set; }
+    public int TotalVisitas { get; set; }
+    public DateTime? FechaUltimaVisita { get; set; }
+}
+
+// ── Catálogos para los dropdowns ──────────────────────────────────────
+public class CatalogoItemDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+}

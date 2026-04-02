@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using RoclandAccesoControl.Web.Models.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RoclandAccesoControl.Web.Services.Interfaces;
 
 namespace RoclandAccesoControl.Web.Controllers;
@@ -12,8 +12,13 @@ public class VisitantesController : ControllerBase
     public VisitantesController(IAccesoService acceso) => _acceso = acceso;
 
     [HttpPost]
-    public async Task<IActionResult> Registrar(CrearVisitanteRequest request)
+    [EnableRateLimiting("FormSubmissionLimit")]
+    public async Task<IActionResult> Registrar(
+        [FromBody] RoclandAccesoControl.Web.Models.DTOs.CrearVisitanteRequest request)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
         if (!request.ConsentimientoFirmado)
             return BadRequest("El consentimiento es obligatorio.");
 
