@@ -7,6 +7,8 @@ using RoclandAccesoControl.Web.Hubs;
 using RoclandAccesoControl.Web.Services;
 using RoclandAccesoControl.Web.Services.Interfaces;
 using System.Text;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,6 +112,19 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
+// Configuración de Rate Limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("FormSubmissionLimit", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(5);
+        opt.PermitLimit = 3;
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = 429; // Too Many Requests
+});
+
 var app = builder.Build();
 
 // ── Middleware pipeline ────────────────────────────────────────────────
@@ -118,6 +133,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseRateLimiter();
 
 app.UseHttpsRedirection();
 app.UseCors("MobilePolicy");
