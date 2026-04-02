@@ -263,6 +263,205 @@ public class AccesoService : IAccesoService
         return persona;
     }
 
+    // ── Métodos para Guardias ───────────────────────────────────────
+
+    public async Task<IEnumerable<SolicitudPendienteResponse>> ObtenerSolicitudesPendientesAsync()
+    {
+        var solicitudes = await _db.SolicitudesPendientes
+            .Include(s => s.Persona)
+            .ThenInclude(p => p.TipoIdentificacion)
+            .Where(s => s.Estado == "Pendiente")
+            .ToListAsync();
+
+        var respuestas = new List<SolicitudPendienteResponse>();
+
+        foreach (var s in solicitudes)
+        {
+            string motivo = string.Empty;
+            string area = string.Empty;
+
+            if (s.TipoRegistro == "Visitante")
+            {
+                var reg = await _db.RegistrosVisitantes
+                    .Include(r => r.Motivo)
+                    .Include(r => r.Area)
+                    .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
+
+                motivo = reg?.Motivo?.Nombre ?? "";
+                area = reg?.Area?.Nombre ?? "";
+            }
+            else if (s.TipoRegistro == "Proveedor")
+            {
+                var reg = await _db.RegistrosProveedores
+                    .Include(r => r.Motivo)
+                    .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
+
+                motivo = reg?.Motivo?.Nombre ?? "";
+            }
+
+            respuestas.Add(new SolicitudPendienteResponse(
+                SolicitudId: s.Id,
+                RegistroId: s.RegistroId,
+                TipoRegistro: s.TipoRegistro,
+                PersonaId: s.PersonaId,
+                NombrePersona: s.Persona.Nombre,
+                Empresa: s.Persona.Empresa,
+                NumeroIdentificacion: s.Persona.NumeroIdentificacion,
+                TipoID: s.Persona.TipoIdentificacion?.Nombre ?? "",
+                Motivo: motivo,
+                Area: area,
+                FechaSolicitud: s.FechaSolicitud
+            ));
+        }
+
+        return respuestas.OrderBy(r => r.FechaSolicitud);
+    }
+
+    public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync()
+    {
+        var respuestas = new List<AccesoActivoResponse>();
+
+        // Visitantes activos
+        var visitantes = await _db.RegistrosVisitantes
+            .Include(r => r.Persona)
+            .Include(r => r.Area)
+            .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+            .ToListAsync();
+
+        respuestas.AddRange(visitantes.Select(v => new AccesoActivoResponse(
+            RegistroId: v.Id,
+            TipoRegistro: "Visitante",
+            NombrePersona: v.Persona.Nombre,
+            Empresa: v.Persona.Empresa,
+            NumeroGafete: v.NumeroGafete ?? "",
+            FechaEntrada: v.FechaEntrada,
+            Area: v.Area.Nombre
+        )));
+
+        // Proveedores activos
+        var proveedores = await _db.RegistrosProveedores
+            .Include(r => r.Persona)
+            .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+            .ToListAsync();
+
+        respuestas.AddRange(proveedores.Select(p => new AccesoActivoResponse(
+            RegistroId: p.Id,
+            TipoRegistro: "Proveedor",
+            NombrePersona: p.Persona.Nombre,
+            Empresa: p.Persona.Empresa,
+            NumeroGafete: p.NumeroGafete ?? "",
+            FechaEntrada: p.FechaEntrada,
+            Area: "N/A"
+        )));
+
+        return respuestas.OrderByDescending(r => r.FechaEntrada);
+    }
+
+    public async Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request)
+    {
+        var solicitud = await _db.SolicitudesPendientes.FindAsync(request.SolicitudId);
+        if (solicitud == null || solicitud.Estado != "Pendiente") return false;
+
+        solicitud.Estado = "Aprobado";
+        solicitud.GuardiaId = request.GuardiaId;
+
+        if (solicitud.TipoRegistro == "Visitante")
+        {
+            var registro = await _db.RegistrosVisitantes.FindAsync(solicitud.RegistroId);
+            if (registro != null)
+            {
+                registro.EstadoAcceso = "Aprobado";
+                registro.GuardiaEntradaId = request.GuardiaId;
+                registro.NumeroGafete = request.NumeroGafete;
+            }
+        }
+        else if (solicitud.TipoRegistro == "Proveedor")
+        {
+            var registro = await _db.RegistrosProveedores.FindAsync(solicitud.RegistroId);
+            if (registro != null)
+            {
+                registro.EstadoAcceso = "Aprobado";
+                registro.GuardiaEntradaId = request.GuardiaId;
+                registro.NumeroGafete = request.NumeroGafete;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        // Notificar por SignalR a la web que se aprobó
+        await _hub.Clients.All.SendAsync("SolicitudAprobada", request.SolicitudId);
+
+        return true;
+    }
+
+    public async Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request)
+    {
+        var solicitud = await _db.SolicitudesPendientes.FindAsync(request.SolicitudId);
+        if (solicitud == null || solicitud.Estado != "Pendiente") return false;
+
+        solicitud.Estado = "Rechazado";
+        solicitud.GuardiaId = request.GuardiaId;
+
+        if (solicitud.TipoRegistro == "Visitante")
+        {
+            var registro = await _db.RegistrosVisitantes.FindAsync(solicitud.RegistroId);
+            if (registro != null)
+            {
+                registro.EstadoAcceso = "Rechazado";
+                registro.GuardiaEntradaId = request.GuardiaId;
+                registro.Observaciones = string.IsNullOrEmpty(registro.Observaciones)
+                    ? request.Motivo
+                    : $"{registro.Observaciones} | Rechazo: {request.Motivo}";
+            }
+        }
+        else if (solicitud.TipoRegistro == "Proveedor")
+        {
+            var registro = await _db.RegistrosProveedores.FindAsync(solicitud.RegistroId);
+            if (registro != null)
+            {
+                registro.EstadoAcceso = "Rechazado";
+                registro.GuardiaEntradaId = request.GuardiaId;
+                registro.Observaciones = string.IsNullOrEmpty(registro.Observaciones)
+                    ? request.Motivo
+                    : $"{registro.Observaciones} | Rechazo: {request.Motivo}";
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        // Notificar por SignalR a la web que se rechazó
+        await _hub.Clients.All.SendAsync("SolicitudRechazada", request.SolicitudId);
+
+        return true;
+    }
+
+    public async Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request)
+    {
+        if (request.TipoRegistro == "Visitante")
+        {
+            var registro = await _db.RegistrosVisitantes.FindAsync(request.RegistroId);
+            if (registro == null || registro.FechaSalida != null) return false;
+
+            registro.FechaSalida = DateTime.Now;
+            registro.GuardiaSalidaId = request.GuardiaId;
+        }
+        else if (request.TipoRegistro == "Proveedor")
+        {
+            var registro = await _db.RegistrosProveedores.FindAsync(request.RegistroId);
+            if (registro == null || registro.FechaSalida != null) return false;
+
+            registro.FechaSalida = DateTime.Now;
+            registro.GuardiaSalidaId = request.GuardiaId;
+        }
+        else
+        {
+            return false;
+        }
+
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
     private async Task ActualizarContadorAsync(int personaId)
     {
         var persona = await _db.Personas.FindAsync(personaId);
