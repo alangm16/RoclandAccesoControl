@@ -29,9 +29,7 @@ public class AccesoService : IAccesoService
     {
         var persona = await _db.Personas
             .Include(p => p.TipoIdentificacion)
-            .Where(p => p.Activo && p.NumeroIdentificacion.Contains(numId))
-            .OrderByDescending(p => p.TotalVisitas)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(p => p.Activo && p.NumeroIdentificacion == numId);
 
         if (persona is null) return null;
 
