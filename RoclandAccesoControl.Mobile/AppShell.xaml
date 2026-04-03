@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<Shell
-    x:Class="RoclandAccesoControl.Mobile.AppShell"
-    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:RoclandAccesoControl.Mobile"
-    Title="RoclandAccesoControl.Mobile">
+<Shell x:Class="RoclandAccesoControl.Mobile.AppShell"
+       xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:views="clr-namespace:RoclandAccesoControl.Mobile.Views"
+       Shell.FlyoutBehavior="Disabled"
+       BackgroundColor="#0F172A"
+       TitleColor="White">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <!-- Login (fuera del TabBar) -->
+    <ShellContent Route="Login"
+                  ContentTemplate="{DataTemplate views:LoginPage}"
+                  Shell.NavBarIsVisible="False"/>
+
+    <!-- TabBar principal (visible tras login) -->
+    <TabBar Route="Main">
+        <ShellContent Title="Solicitudes"
+                      Route="Solicitudes"
+                      Icon="tab_solicitudes.png"
+                      ContentTemplate="{DataTemplate views:SolicitudesPage}"/>
+        <ShellContent Title="Dentro ahora"
+                      Route="AccesosActivos"
+                      Icon="tab_activos.png"
+                      ContentTemplate="{DataTemplate views:AccesosActivosPage}"/>
+    </TabBar>
 
 </Shell>

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="RoclandAccesoControl.Mobile.Views.SolicitudesPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoclandAccesoControl.Mobile.ViewModels"
+             xmlns:models="clr-namespace:RoclandAccesoControl.Mobile.Models"
+             x:DataType="vm:SolicitudesViewModel"
+             BackgroundColor="#0F172A">
+
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="*,Auto" Padding="0,0,16,0">
+            <Label Text="Solicitudes" FontSize="18" FontAttributes="Bold"
+                   TextColor="White" VerticalOptions="Center"/>
+            <Label Grid.Column="1"
+                   Text="{Binding EstadoConexion}"
+                   TextColor="{Binding ColorEstadoConexion}"
+                   FontSize="12" VerticalOptions="Center"/>
+        </Grid>
+    </Shell.TitleView>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header con contador -->
+        <Frame Grid.Row="0" BackgroundColor="#1E293B" CornerRadius="0"
+               Padding="16,12" BorderColor="Transparent">
+            <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Solicitudes pendientes" FontSize="12" TextColor="#94A3B8"/>
+                    <Label Text="{Binding CantidadPendientes}" FontSize="28"
+                           FontAttributes="Bold" TextColor="White"/>
+                </VerticalStackLayout>
+                <Button Grid.Column="1"
+                        Text="↻ Actualizar"
+                        Command="{Binding CargarSolicitudesCommand}"
+                        BackgroundColor="#1D4ED8"
+                        TextColor="White" CornerRadius="8"
+                        FontSize="13" Padding="12,8"/>
+            </Grid>
+        </Frame>
+
+        <!-- Lista de solicitudes -->
+        <RefreshView Grid.Row="1"
+                     Command="{Binding CargarSolicitudesCommand}"
+                     IsRefreshing="{Binding EstaCargando}"
+                     RefreshColor="#2563EB">
+            <CollectionView ItemsSource="{Binding Solicitudes}"
+                            EmptyView="Sin solicitudes pendientes">
+                <CollectionView.EmptyViewTemplate>
+                    <DataTemplate>
+                        <VerticalStackLayout VerticalOptions="Center"
+                                             HorizontalOptions="Center"
+                                             Spacing="12" Padding="32">
+                            <Label Text="✓" FontSize="48"
+                                   HorizontalOptions="Center" TextColor="#22C55E"/>
+                            <Label Text="Sin solicitudes pendientes"
+                                   FontSize="16" TextColor="#64748B"
+                                   HorizontalOptions="Center"/>
+                            <Label Text="Desliza hacia abajo para actualizar"
+                                   FontSize="13" TextColor="#475569"
+                                   HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.EmptyViewTemplate>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:SolicitudPendiente">
+                        <Frame BackgroundColor="#1E293B" CornerRadius="12"
+                               Margin="16,8,16,0" Padding="16" BorderColor="#334155">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SolicitudesViewModel}}, Path=VerDetallCommand}"
+                                    CommandParameter="{Binding .}"/>
+                            </Frame.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto"
+                                  ColumnSpacing="12">
+
+                                <!-- Icono tipo -->
+                                <Frame Grid.RowSpan="3" BackgroundColor="#0F172A"
+                                       CornerRadius="10" Padding="10"
+                                       BorderColor="Transparent" VerticalOptions="Center">
+                                    <Label Text="{Binding TipoIcono}" FontSize="24"/>
+                                </Frame>
+
+                                <!-- Nombre -->
+                                <Label Grid.Column="1" Grid.Row="0"
+                                       Text="{Binding NombrePersona}"
+                                       FontSize="16" FontAttributes="Bold"
+                                       TextColor="White"/>
+
+                                <!-- Empresa/Area -->
+                                <Label Grid.Column="1" Grid.Row="1"
+                                       Text="{Binding AreaOEmpresa}"
+                                       FontSize="13" TextColor="#94A3B8"/>
+
+                                <!-- Motivo -->
+                                <Label Grid.Column="1" Grid.Row="2"
+                                       Text="{Binding Motivo}"
+                                       FontSize="12" TextColor="#64748B"/>
+
+                                <!-- Hora -->
+                                <Label Grid.Column="2" Grid.Row="0"
+                                       Text="{Binding HoraFormateada}"
+                                       FontSize="14" FontAttributes="Bold"
+                                       TextColor="#2563EB" VerticalOptions="Start"/>
+
+                                <!-- Badge tipo -->
+                                <Frame Grid.Column="2" Grid.Row="1"
+                                       BackgroundColor="{Binding TipoColor}"
+                                       CornerRadius="6" Padding="6,3"
+                                       BorderColor="Transparent">
+                                    <Label Text="{Binding TipoRegistro}"
+                                           FontSize="11" TextColor="White"/>
+                                </Frame>
+
+                                <!-- Chevron -->
+                                <Label Grid.Column="2" Grid.Row="2"
+                                       Text="›" FontSize="20" TextColor="#475569"
+                                       HorizontalOptions="End"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <!-- Bottom bar -->
+        <Frame Grid.Row="2" BackgroundColor="#1E293B" Padding="16,12"
+               BorderColor="#334155" CornerRadius="0">
+            <Grid ColumnDefinitions="*,*">
+                <Button Text="👥 Dentro ahora"
+                        Command="{Binding IrAActivosCommand}"
+                        BackgroundColor="#0F172A"
+                        TextColor="#94A3B8" CornerRadius="10"
+                        Margin="0,0,8,0"/>
+                <Button Grid.Column="1"
+                        Text="Cerrar sesión"
+                        Command="{Binding CerrarSesionCommand}"
+                        BackgroundColor="#0F172A"
+                        TextColor="#EF4444" CornerRadius="10"
+                        Margin="8,0,0,0"/>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

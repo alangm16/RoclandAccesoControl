@@ -1,17 +1,35 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using RoclandAccesoControl.Mobile.Services;
 
-namespace RoclandAccesoControl.Mobile
+namespace RoclandAccesoControl.Mobile;
+
+public partial class App : Application
 {
-    public partial class App : Application
-    {
-        public App()
-        {
-            InitializeComponent();
-        }
+    private readonly AuthStateService _auth;
 
-        protected override Window CreateWindow(IActivationState? activationState)
+    public App(AuthStateService auth)
+    {
+        InitializeComponent();
+        _auth = auth;
+
+        // MainPage DEBE asignarse en el constructor
+        MainPage = new AppShell();
+    }
+
+    protected override async void OnStart()
+    {
+        base.OnStart();
+
+        try
         {
-            return new Window(new AppShell());
+            var sesionRestaurada = await _auth.RestaurarSesionAsync();
+            await Shell.Current.GoToAsync(sesionRestaurada ? "//Solicitudes" : "//Login");
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error de inicio",
+                $"{ex.GetType().Name}\n\n{ex.Message}\n\n{ex.InnerException?.Message}",
+                "OK");
         }
     }
 }

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="RoclandAccesoControl.Mobile.Views.AccesosActivosPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoclandAccesoControl.Mobile.ViewModels"
+             xmlns:models="clr-namespace:RoclandAccesoControl.Mobile.Models"
+             x:DataType="vm:AccesosActivosViewModel"
+             Title="Dentro ahora"
+             BackgroundColor="#0F172A">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Frame Grid.Row="0" BackgroundColor="#1E293B" Padding="16,12"
+               CornerRadius="0" BorderColor="Transparent">
+            <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Personas en instalaciones" FontSize="12" TextColor="#94A3B8"/>
+                    <Label Text="{Binding TotalDentro}"
+                           FontSize="28" FontAttributes="Bold" TextColor="White"/>
+                </VerticalStackLayout>
+                <Button Grid.Column="1" Text="↻ Actualizar"
+                        Command="{Binding CargarCommand}"
+                        BackgroundColor="#1D4ED8"
+                        TextColor="White" CornerRadius="8"
+                        FontSize="13" Padding="12,8"/>
+            </Grid>
+        </Frame>
+
+        <!-- Lista -->
+        <RefreshView Grid.Row="1"
+                     Command="{Binding CargarCommand}"
+                     IsRefreshing="{Binding EstaCargando}"
+                     RefreshColor="#2563EB">
+            <CollectionView ItemsSource="{Binding Activos}">
+                <CollectionView.EmptyViewTemplate>
+                    <DataTemplate>
+                        <VerticalStackLayout VerticalOptions="Center"
+                                             HorizontalOptions="Center"
+                                             Spacing="12" Padding="32">
+                            <Label Text="🏢" FontSize="48" HorizontalOptions="Center"/>
+                            <Label Text="No hay personas dentro"
+                                   FontSize="16" TextColor="#64748B"
+                                   HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.EmptyViewTemplate>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:AccesoActivo">
+                        <Frame BackgroundColor="#1E293B" CornerRadius="12"
+                               Margin="16,8,16,0" Padding="16" BorderColor="#334155">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+
+                                <!-- Icono -->
+                                <Frame BackgroundColor="#0F172A" CornerRadius="10"
+                                       Padding="10" BorderColor="Transparent"
+                                       VerticalOptions="Center">
+                                    <Label Text="{Binding TipoIcono}" FontSize="22"/>
+                                </Frame>
+
+                                <!-- Info -->
+                                <VerticalStackLayout Grid.Column="1" Spacing="3"
+                                                     VerticalOptions="Center">
+                                    <Label Text="{Binding NombrePersona}"
+                                           FontSize="15" FontAttributes="Bold"
+                                           TextColor="White"/>
+                                    <Label Text="{Binding Empresa}" FontSize="12"
+                                           TextColor="#94A3B8"/>
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="{Binding Area}" FontSize="12"
+                                               TextColor="#64748B"/>
+                                        <Label Text="·" FontSize="12" TextColor="#334155"/>
+                                        <Label Text="{Binding TiempoTranscurrido}"
+                                               FontSize="12" TextColor="#F59E0B"/>
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+
+                                <!-- Gafete + Botón -->
+                                <VerticalStackLayout Grid.Column="2" Spacing="6"
+                                                     VerticalOptions="Center"
+                                                     HorizontalOptions="End">
+                                    <Frame BackgroundColor="#0F172A" CornerRadius="6"
+                                           Padding="8,4" BorderColor="#334155">
+                                        <Label Text="{Binding NumeroGafete}"
+                                               FontSize="13" FontAttributes="Bold"
+                                               TextColor="#2563EB"/>
+                                    </Frame>
+                                    <Button Text="Salida"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AccesosActivosViewModel}}, Path=MarcarSalidaCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="#B91C1C"
+                                            TextColor="White"
+                                            CornerRadius="8"
+                                            FontSize="12"
+                                            Padding="10,6"
+                                            HeightRequest="36"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

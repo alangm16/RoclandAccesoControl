@@ -1,10 +1,12 @@
-﻿namespace RoclandAccesoControl.Mobile
+﻿using RoclandAccesoControl.Mobile.Views;
+
+namespace RoclandAccesoControl.Mobile;
+
+public partial class AppShell : Shell
 {
-    public partial class AppShell : Shell
+    public AppShell()
     {
-        public AppShell()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+        Routing.RegisterRoute(nameof(DetalleSolicitudPage), typeof(DetalleSolicitudPage));
     }
 }
