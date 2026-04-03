@@ -37,3 +37,5 @@ obj/
 # Rider / VS Code
 .idea/
 .vscode/
+
+appsettings.Production.json

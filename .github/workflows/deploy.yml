@@ -1,0 +1,35 @@
+name: Deploy to IIS on Windows Server
+
+on:
+  push:
+    branches: [ "master" ]  
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, windows]  # Usa tu runner autohospedado
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'  # Versión de .NET
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build the application
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Publish the application
+      run: dotnet publish --configuration Release --output ./publish --no-build
+
+    - name: Deploy to IIS
+      run: |
+        # Detener el sitio web en IIS (opcional, pero recomendado)
+        iisreset /stop
+        # Copiar los archivos publicados a la carpeta del sitio en IIS
+        Copy-Item -Path "./publish/*" -Destination "C:\RoclandAccesoControl" -Recurse -Force
+        # Reiniciar el sitio web
+        iisreset /start
