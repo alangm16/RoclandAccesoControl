@@ -1,0 +1,230 @@
+﻿@page
+@model RoclandAccesoControl.Web.Pages.Admin.DashboardModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Dashboard";
+    ViewData["Page"] = "dashboard";
+}
+
+<!-- KPIs -->
+<div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card green">
+        <div class="kpi-label">Dentro ahora</div>
+        <div class="kpi-value" id="kpi-dentro">—</div>
+        <div class="kpi-sub">personas en instalaciones</div>
+    </div>
+    <div class="kpi-card blue">
+        <div class="kpi-label">Total hoy</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub">accesos registrados</div>
+    </div>
+    <div class="kpi-card blue">
+        <div class="kpi-label">Visitantes</div>
+        <div class="kpi-value" id="kpi-vis">—</div>
+        <div class="kpi-sub">hoy</div>
+    </div>
+    <div class="kpi-card purple">
+        <div class="kpi-label">Proveedores</div>
+        <div class="kpi-value" id="kpi-prov">—</div>
+        <div class="kpi-sub">hoy</div>
+    </div>
+    <div class="kpi-card amber">
+        <div class="kpi-label">Prom. estancia</div>
+        <div class="kpi-value" id="kpi-prom">—</div>
+        <div class="kpi-sub">minutos promedio</div>
+    </div>
+    <div class="kpi-card red">
+        <div class="kpi-label">Pendientes</div>
+        <div class="kpi-value" id="kpi-pend">—</div>
+        <div class="kpi-sub">solicitudes sin resolver</div>
+    </div>
+</div>
+
+<!-- Dentro ahora -->
+<div class="table-card mb-4" style="margin-bottom:24px;">
+    <div class="table-header">
+        <span class="table-title">● Dentro ahora</span>
+        <button class="btn btn-ghost btn-sm" onclick="cargarActivos()">↻ Actualizar</button>
+    </div>
+    <div class="activos-grid" id="activos-container" style="padding:16px;">
+        <div class="text-muted text-mono" style="font-size:12px;">Cargando...</div>
+    </div>
+</div>
+
+<!-- Gráficas -->
+<div class="charts-grid">
+    <div class="chart-card">
+        <div class="chart-title">Flujo por hora — hoy</div>
+        <canvas id="chartHoras" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+        <div class="chart-title">Áreas más visitadas (30 días)</div>
+        <canvas id="chartAreas" height="200"></canvas>
+    </div>
+</div>
+
+<div class="chart-card" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div class="chart-title" style="margin:0;">Flujo diario del mes</div>
+        <div style="display:flex;gap:8px;">
+            <select id="selAnio" class="filter-input" style="min-width:80px;"></select>
+            <select id="selMes" class="filter-input" style="min-width:120px;"></select>
+        </div>
+    </div>
+    <canvas id="chartMes" height="120"></canvas>
+</div>
+
+@section Scripts {
+    <script>
+        const colores = {
+            accent: '#3B82F6', green: '#22C55E', amber: '#F59E0B',
+            purple: '#8B5CF6', red: '#EF4444', muted: '#334155'
+        };
+
+        const chartDefaults = {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#64748B', font: { family: 'IBM Plex Mono', size: 11 } } } },
+            scales: {
+                x: { grid: { color: '#1E2D45' }, ticks: { color: '#64748B', font: { family: 'IBM Plex Mono', size: 10 } } },
+                y: { grid: { color: '#1E2D45' }, ticks: { color: '#64748B', font: { family: 'IBM Plex Mono', size: 10 } }, beginAtZero: true }
+            }
+        };
+
+        // ── KPIs ──────────────────────────────────────────────────────────────
+        async function cargarKpis() {
+            const r = await fetch('/api/admin/kpis', { headers: authHeader() });
+            if (!r.ok) return;
+            const d = await r.json();
+            document.getElementById('kpi-dentro').textContent = d.dentroAhora;
+            document.getElementById('kpi-total').textContent = d.totalHoy;
+            document.getElementById('kpi-vis').textContent = d.totalVisitantesHoy;
+            document.getElementById('kpi-prov').textContent = d.totalProveedoresHoy;
+            document.getElementById('kpi-prom').textContent = d.promedioEstanciaMinutos;
+            document.getElementById('kpi-pend').textContent = d.solicitudesPendientes;
+        }
+
+        // ── Activos ────────────────────────────────────────────────────────────
+        async function cargarActivos() {
+            const r = await fetch('/api/guardias/activos', { headers: authHeader() });
+            const data = r.ok ? await r.json() : [];
+            const cont = document.getElementById('activos-container');
+            if (!data.length) {
+                cont.innerHTML = '<div class="text-muted text-mono" style="font-size:12px;padding:8px 0;">Sin personas dentro actualmente.</div>';
+                return;
+            }
+            cont.innerHTML = data.map(a => `
+                <div class="activo-card">
+                    <div class="activo-name">${a.nombrePersona}</div>
+                    <div class="activo-meta">${a.tipoRegistro} · ${a.area || a.empresa || ''}</div>
+                    <div class="activo-meta">Entrada: ${fmtHora(a.fechaEntrada)}</div>
+                    <div class="activo-gafete"># ${a.numeroGafete || '—'}</div>
+                </div>`).join('');
+        }
+
+        // ── Gráfica horas ──────────────────────────────────────────────────────
+        let chartHoras, chartAreas, chartMes;
+
+        async function cargarGraficaHoras() {
+            const r = await fetch('/api/admin/flujo/horas', { headers: authHeader() });
+            if (!r.ok) return;
+            const data = await r.json();
+            const labels = data.map(d => `${String(d.hora).padStart(2,'0')}:00`);
+            const values = data.map(d => d.total);
+
+            const ctx = document.getElementById('chartHoras').getContext('2d');
+            if (chartHoras) chartHoras.destroy();
+            chartHoras = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{ label: 'Accesos', data: values,
+                        backgroundColor: 'rgba(59,130,246,0.6)',
+                        borderColor: colores.accent, borderWidth: 1 }]
+                },
+                options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+            });
+        }
+
+        async function cargarGraficaAreas() {
+            const r = await fetch('/api/admin/areas/ranking?dias=30', { headers: authHeader() });
+            if (!r.ok) return;
+            const data = await r.json();
+            const ctx = document.getElementById('chartAreas').getContext('2d');
+            if (chartAreas) chartAreas.destroy();
+            chartAreas = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => d.area),
+                    datasets: [{ data: data.map(d => d.total),
+                        backgroundColor: ['#3B82F6','#8B5CF6','#22C55E','#F59E0B','#EF4444','#06B6D4','#EC4899','#84CC16'],
+                        borderColor: '#0F1724', borderWidth: 2 }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'right', labels: { color: '#94A3B8', font: { family: 'IBM Plex Mono', size: 10 }, boxWidth: 12 } } }
+                }
+            });
+        }
+
+        async function cargarGraficaMes() {
+            const anio = document.getElementById('selAnio').value;
+            const mes = document.getElementById('selMes').value;
+            const r = await fetch(`/api/admin/flujo/diario?anio=${anio}&mes=${mes}`, { headers: authHeader() });
+            if (!r.ok) return;
+            const data = await r.json();
+            const ctx = document.getElementById('chartMes').getContext('2d');
+            if (chartMes) chartMes.destroy();
+            chartMes = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.fecha),
+                    datasets: [
+                        { label: 'Visitantes', data: data.map(d => d.visitantes),
+                            borderColor: colores.accent, backgroundColor: 'rgba(59,130,246,0.1)',
+                            tension: 0.3, fill: true },
+                        { label: 'Proveedores', data: data.map(d => d.proveedores),
+                            borderColor: colores.purple, backgroundColor: 'rgba(139,92,246,0.1)',
+                            tension: 0.3, fill: true }
+                    ]
+                },
+                options: chartDefaults
+            });
+        }
+
+        // ── Selectores año/mes ─────────────────────────────────────────────────
+        function initSelectores() {
+            const now = new Date();
+            const selA = document.getElementById('selAnio');
+            const selM = document.getElementById('selMes');
+            for (let y = now.getFullYear(); y >= now.getFullYear() - 2; y--) {
+                selA.innerHTML += `<option value="${y}" ${y === now.getFullYear() ? 'selected' : ''}>${y}</option>`;
+            }
+            const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            meses.forEach((m, i) => {
+                selM.innerHTML += `<option value="${i+1}" ${i+1 === now.getMonth()+1 ? 'selected' : ''}>${m}</option>`;
+            });
+            selA.addEventListener('change', cargarGraficaMes);
+            selM.addEventListener('change', cargarGraficaMes);
+        }
+
+        // ── Helpers ────────────────────────────────────────────────────────────
+        function authHeader() {
+            // El admin usa cookie, no necesita JWT header para las páginas Razor
+            // Para llamadas a la API desde el panel usamos el mismo cookie de sesión
+            return { 'Content-Type': 'application/json' };
+        }
+
+        function fmtHora(iso) {
+            return new Date(iso).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        // ── Init ───────────────────────────────────────────────────────────────
+        (async () => {
+            initSelectores();
+            await Promise.all([cargarKpis(), cargarActivos(), cargarGraficaHoras(), cargarGraficaAreas()]);
+            await cargarGraficaMes();
+            // Actualizar KPIs y activos cada 30s
+            setInterval(() => { cargarKpis(); cargarActivos(); }, 30000);
+        })();
+    </script>
+}

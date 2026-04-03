@@ -29,7 +29,11 @@ builder.Services.AddDbContext<RoclandDbContext>(options =>
 builder.Services.AddSignalR();
 
 // ── JWT Auth ───────────────────────────────────────────────────────────
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -59,9 +63,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 return Task.CompletedTask;
             }
         };
-    });
+    })
+     .AddCookie("AdminCookie", options =>
+     {
+         options.LoginPath = "/Admin/Login";
+         options.LogoutPath = "/Admin/Logout";
+         options.AccessDeniedPath = "/Admin/Login";
+         options.ExpireTimeSpan = TimeSpan.FromHours(8);
+         options.SlidingExpiration = true;
+         options.Cookie.Name = "RoclandAdmin";
+         options.Cookie.HttpOnly = true;
+         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+     }); ;
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPolicy", policy =>
+        policy.RequireRole("Admin", "Supervisor")
+              .AddAuthenticationSchemes("AdminCookie"));
+});
 
 // ── Swagger ────────────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
@@ -102,6 +122,7 @@ builder.Services.AddSwaggerGen(c =>
 // ── Servicios de la app ────────────────────────────────────────────────
 builder.Services.AddScoped<IAccesoService, AccesoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 // ── CORS (para la app móvil) ───────────────────────────────────────────
 builder.Services.AddCors(options =>

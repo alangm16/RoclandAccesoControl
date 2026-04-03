@@ -1,0 +1,147 @@
+﻿@page
+@model RoclandAccesoControl.Web.Pages.Admin.GuardiasModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Gestión de Guardias";
+    ViewData["Page"] = "guardias";
+}
+
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+    <button class="btn btn-primary" onclick="abrirModal()">+ Nuevo guardia</button>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Usuario</th>
+                <th>Estado</th>
+                <th>Fecha Alta</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tablaGuardias">
+            <tr><td colspan="5" class="text-muted" style="text-align:center;padding:24px;">Cargando...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal nuevo guardia -->
+<div class="modal-overlay" id="modalNuevo">
+    <div class="modal">
+        <button class="modal-close" onclick="cerrarModal()">✕</button>
+        <div class="modal-title">Nuevo Guardia</div>
+        <div class="form-group">
+            <label class="form-label">Nombre completo</label>
+            <input id="gNombre" type="text" class="form-control" placeholder="Ej: Juan García" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Usuario</label>
+            <input id="gUsuario" type="text" class="form-control" placeholder="Ej: jgarcia" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <input id="gPassword" type="password" class="form-control" />
+        </div>
+        <div id="gError" style="color:var(--red);font-size:12px;margin-bottom:12px;display:none;"></div>
+        <button class="btn btn-primary" style="width:100%;" onclick="crearGuardia()">Crear guardia</button>
+    </div>
+</div>
+
+<!-- Modal reset password -->
+<div class="modal-overlay" id="modalReset">
+    <div class="modal">
+        <button class="modal-close" onclick="cerrarReset()">✕</button>
+        <div class="modal-title">Resetear contraseña</div>
+        <input type="hidden" id="resetId" />
+        <div class="form-group">
+            <label class="form-label">Nueva contraseña</label>
+            <input id="resetPwd" type="password" class="form-control" />
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="confirmarReset()">Guardar</button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function cargarGuardias() {
+            const r = await fetch('/api/admin/guardias');
+            if (!r.ok) return;
+            const data = await r.json();
+            document.getElementById('tablaGuardias').innerHTML = data.map(g => `
+                <tr>
+                    <td style="font-weight:500;">${g.nombre}</td>
+                    <td class="text-mono">${g.usuario}</td>
+                    <td><span class="badge ${g.activo ? 'badge-green' : 'badge-red'}">${g.activo ? 'Activo' : 'Inactivo'}</span></td>
+                    <td class="text-muted text-mono" style="font-size:12px;">${new Date(g.fechaCreacion).toLocaleDateString('es-MX')}</td>
+                    <td style="display:flex;gap:8px;">
+                        <button class="btn btn-ghost btn-sm" onclick="toggleGuardia(${g.id}, '${g.nombre}', ${g.activo})">
+                            ${g.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="abrirReset(${g.id})">Reset pwd</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function abrirModal() { document.getElementById('modalNuevo').classList.add('open'); }
+        function cerrarModal() {
+            document.getElementById('modalNuevo').classList.remove('open');
+            ['gNombre','gUsuario','gPassword'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        async function crearGuardia() {
+            const nombre = document.getElementById('gNombre').value.trim();
+            const usuario = document.getElementById('gUsuario').value.trim();
+            const password = document.getElementById('gPassword').value;
+            const errEl = document.getElementById('gError');
+
+            if (!nombre || !usuario || !password) {
+                errEl.textContent = 'Todos los campos son requeridos.';
+                errEl.style.display = 'block'; return;
+            }
+
+            const r = await fetch('/api/admin/guardias', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, usuario, password })
+            });
+
+            if (r.ok) { cerrarModal(); cargarGuardias(); }
+            else { errEl.textContent = 'No se pudo crear. El usuario ya existe.'; errEl.style.display = 'block'; }
+        }
+
+        async function toggleGuardia(id, nombre, activo) {
+            const confirm = window.confirm(`¿${activo ? 'Desactivar' : 'Activar'} a ${nombre}?`);
+            if (!confirm) return;
+            await fetch(`/api/admin/guardias/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, activo: !activo })
+            });
+            cargarGuardias();
+        }
+
+        function abrirReset(id) {
+            document.getElementById('resetId').value = id;
+            document.getElementById('resetPwd').value = '';
+            document.getElementById('modalReset').classList.add('open');
+        }
+        function cerrarReset() { document.getElementById('modalReset').classList.remove('open'); }
+
+        async function confirmarReset() {
+            const id = document.getElementById('resetId').value;
+            const pwd = document.getElementById('resetPwd').value;
+            if (!pwd) return;
+            await fetch(`/api/admin/guardias/${id}/reset`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pwd)
+            });
+            cerrarReset();
+            alert('Contraseña actualizada.');
+        }
+
+        cargarGuardias();
+    </script>
+}
