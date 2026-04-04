@@ -2,5 +2,6 @@
   <Project Path="RoclandAccesoControl.Mobile/RoclandAccesoControl.Mobile.csproj">
     <Deploy Solution="Debug|*" />
   </Project>
+  <Project Path="RoclandAccesoControl.Tests/RoclandAccesoControl.Tests.csproj" Id="673a81db-4ed6-43d8-b445-803744f6c60e" />
   <Project Path="RoclandAccesoControl.Web/RoclandAccesoControl.Web.csproj" />
 </Solution>

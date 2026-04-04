@@ -227,4 +227,5 @@ app.UseSerilogRequestLogging(options =>
         "HTTP {RequestMethod} {RequestPath} → {StatusCode} en {Elapsed:0}ms";
 });
 
+// Ejecutar la aplicación
 app.Run();
