@@ -1,4 +1,6 @@
 <Solution>
-  <Project Path="RoclandAccesoControl.Mobile/RoclandAccesoControl.Mobile.csproj" />
+  <Project Path="RoclandAccesoControl.Mobile/RoclandAccesoControl.Mobile.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
   <Project Path="RoclandAccesoControl.Web/RoclandAccesoControl.Web.csproj" />
 </Solution>

@@ -57,7 +57,7 @@ public class AccesoService : IAccesoService
             req.TipoIdentificacionId,
             req.NumeroIdentificacion,
             req.Nombre,
-            req.Empresa,
+            null,
             req.Telefono,
             req.Email);
 
@@ -122,17 +122,11 @@ public class AccesoService : IAccesoService
         var area   = await _db.Areas.FindAsync(req.AreaId);
         var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
 
-        return new VisitanteResponse
-        {
-            Id           = registro.Id,
-            PersonaId    = persona.Id,
-            Nombre       = persona.Nombre,
-            Area         = area?.Nombre   ?? string.Empty,
-            Motivo       = motivo?.Nombre ?? string.Empty,
-            EstadoAcceso = registro.EstadoAcceso,
-            FechaEntrada = registro.FechaEntrada,
-            Mensaje      = "Solicitud recibida. Espera autorización del guardia.",
-        };
+        return new VisitanteResponse(
+            registro.Id, persona.Id, persona.Nombre,
+            area!.Nombre, motivo!.Nombre, registro.EstadoAcceso, registro.FechaEntrada,
+            persona.TotalVisitas > 0,    // EsRecurrente
+            persona.TotalVisitas);
     }
 
     // ── Registrar proveedor ─────────────────────────────────────────
@@ -202,17 +196,11 @@ public class AccesoService : IAccesoService
 
         var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
 
-        return new ProveedorResponse
-        {
-            Id           = registro.Id,
-            PersonaId    = persona.Id,
-            Nombre       = persona.Nombre,
-            Empresa      = persona.Empresa ?? string.Empty,
-            Motivo       = motivo?.Nombre  ?? string.Empty,
-            EstadoAcceso = registro.EstadoAcceso,
-            FechaEntrada = registro.FechaEntrada,
-            Mensaje      = "Solicitud recibida. Espera autorización del guardia.",
-        };
+        return new ProveedorResponse(
+            registro.Id, persona.Id, persona.Nombre,
+            persona.Empresa!, motivo!.Nombre, registro.EstadoAcceso, registro.FechaEntrada,
+            persona.TotalVisitas > 0,
+            persona.TotalVisitas);
     }
 
     // ── Helpers privados ────────────────────────────────────────────

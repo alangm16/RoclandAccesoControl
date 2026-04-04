@@ -24,4 +24,17 @@ public class AuthController : ControllerBase
         var result = await _auth.LoginAdminAsync(request);
         return result is null ? Unauthorized("Credenciales inválidas") : Ok(result);
     }
+
+#if DEBUG
+ 
+    /// Genera un hash BCrypt para insertar en la BD.
+    /// Remover en producción o proteger con autenticación.
+
+    [HttpGet("dev/hash")]
+    public IActionResult GenerarHash([FromQuery] string pwd)
+    {
+        if (string.IsNullOrWhiteSpace(pwd)) return BadRequest();
+        return Ok(new { hash = BCrypt.Net.BCrypt.HashPassword(pwd) });
+    }
+#endif
 }

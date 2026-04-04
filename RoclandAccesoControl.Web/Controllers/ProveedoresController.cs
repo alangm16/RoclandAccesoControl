@@ -5,9 +5,6 @@ using RoclandAccesoControl.Web.Services.Interfaces;
 
 namespace RoclandAccesoControl.Web.Controllers;
 
-// ── Actualización de ProveedoresController con Rate Limiting ─────────
-// Reemplaza el archivo existente Controllers/ProveedoresController.cs
-
 [ApiController]
 [Route("api/[controller]")]
 public class ProveedoresController : ControllerBase

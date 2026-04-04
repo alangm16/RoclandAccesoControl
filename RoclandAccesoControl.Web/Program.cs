@@ -9,8 +9,25 @@ using RoclandAccesoControl.Web.Services.Interfaces;
 using System.Text;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Serilog;
+using Serilog.Events;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: "logs/accesocontrol-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 // Archivo de configuracion locales
 builder.Configuration.AddJsonFile("appsettings.Secrets.json",
@@ -123,6 +140,24 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddScoped<IAccesoService, AccesoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddHostedService<CierreAutomaticoService>();
+
+// ── Seguridad: Headers HTTP ────────────────────────────────────────────
+builder.Services.AddHsts(options =>
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(365);
+});
+
+// ── Antiforgery para Razor Pages ───────────────────────────────────────
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.Name = "RoclandXSRF";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+});
 
 // ── CORS (para la app móvil) ───────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -158,6 +193,23 @@ if (app.Environment.IsDevelopment())
 app.UseRateLimiter();
 
 app.UseHttpsRedirection();
+
+// Headers de seguridad
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    await next();
+});
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
 app.UseCors("MobilePolicy");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -168,5 +220,11 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
 app.MapHub<AccesoHub>("/accesohub");
+
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate =
+        "HTTP {RequestMethod} {RequestPath} → {StatusCode} en {Elapsed:0}ms";
+});
 
 app.Run();
