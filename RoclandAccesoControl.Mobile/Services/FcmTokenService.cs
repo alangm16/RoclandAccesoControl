@@ -1,9 +1,14 @@
 ﻿#if ANDROID
-using Plugin.FirebasePushNotification;
+using Firebase.Messaging;
+using RoclandAccesoControl.Mobile.Platforms.Android;
 #endif
 
 namespace RoclandAccesoControl.Mobile.Services;
 
+/// <summary>
+/// Lee el token FCM guardado por MyFirebaseMessagingService y lo registra en el servidor.
+/// Llamar después de hacer login.
+/// </summary>
 public class FcmTokenService
 {
     private readonly ApiService _api;
@@ -15,28 +20,62 @@ public class FcmTokenService
         _auth = auth;
     }
 
-    /// <summary>
-    /// Obtiene el token FCM actual y lo registra en el servidor.
-    /// Llamar después de hacer login.
-    /// </summary>
     public async Task RegistrarTokenAsync()
     {
 #if ANDROID
         try
         {
-            var token = CrossFirebasePushNotification.Current.Token;
+            // 1. Intentar leer token guardado localmente
+            var token = Preferences.Get(MyFirebaseMessagingService.PrefKey, string.Empty);
+
+            // 2. Si no hay token guardado, pedirlo a Firebase directamente (primera vez)
+            if (string.IsNullOrEmpty(token))
+            {
+                var tcs = new TaskCompletionSource<string>();
+
+                FirebaseMessaging.Instance.GetToken()
+                    .AddOnCompleteListener(new OnCompleteListenerToken(tcs));
+
+                token = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(10))
+                        .ConfigureAwait(false);
+
+                if (!string.IsNullOrEmpty(token))
+                    Preferences.Set(MyFirebaseMessagingService.PrefKey, token);
+            }
+
             if (!string.IsNullOrEmpty(token))
             {
                 await _api.RegistrarFcmTokenAsync(_auth.GuardiaId, token);
+                System.Diagnostics.Debug.WriteLine($"[FCM] Token registrado: {token[..10]}...");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FCM] Error registrando token: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[FCM] Error registrando token: {ex.Message}");
         }
 #else
-        // Otras plataformas no soportadas
-        Console.WriteLine("[FCM] Plataforma no soportada para registro de token.");
+        System.Diagnostics.Debug.WriteLine("[FCM] Plataforma no soportada.");
+        await Task.CompletedTask;
 #endif
     }
 }
+
+#if ANDROID
+/// <summary>
+/// Adaptador para obtener el token FCM de forma asíncrona desde la Task API de Java.
+/// </summary>
+internal class OnCompleteListenerToken : Java.Lang.Object, Android.Gms.Tasks.IOnCompleteListener
+{
+    private readonly TaskCompletionSource<string> _tcs;
+
+    public OnCompleteListenerToken(TaskCompletionSource<string> tcs) => _tcs = tcs;
+
+    public void OnComplete(Android.Gms.Tasks.Task task)
+    {
+        if (task.IsSuccessful && task.Result is Java.Lang.String token)
+            _tcs.TrySetResult(token.ToString());
+        else
+            _tcs.TrySetResult(string.Empty);
+    }
+}
+#endif

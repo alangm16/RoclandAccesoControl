@@ -21,13 +21,12 @@ public class AccesoService : IAccesoService
         ILogger<AccesoService> logger,
         IFcmService fcm)
     {
-        _db     = db;
-        _hub    = hub;
+        _db = db;
+        _hub = hub;
         _logger = logger;
         _fcm = fcm;
     }
 
-    // ── Buscar persona por número de identificación ─────────────────
     public async Task<PersonaBusquedaResponse?> BuscarPersonaAsync(string numId)
     {
         var persona = await _db.Personas
@@ -38,24 +37,22 @@ public class AccesoService : IAccesoService
 
         return new PersonaBusquedaResponse
         {
-            Id                   = persona.Id,
-            Nombre               = persona.Nombre,
-            TipoId               = persona.TipoIdentificacion?.Nombre ?? string.Empty,
+            Id = persona.Id,
+            Nombre = persona.Nombre,
+            TipoId = persona.TipoIdentificacion?.Nombre ?? string.Empty,
             TipoIdentificacionId = persona.TipoIdentificacionId,
             NumeroIdentificacion = persona.NumeroIdentificacion,
-            Empresa              = persona.Empresa,
-            Telefono             = persona.Telefono,
-            Email                = persona.Email,
-            TotalVisitas         = persona.TotalVisitas,
-            FechaUltimaVisita    = persona.FechaUltimaVisita,
+            Empresa = persona.Empresa,
+            Telefono = persona.Telefono,
+            Email = persona.Email,
+            TotalVisitas = persona.TotalVisitas,
+            FechaUltimaVisita = persona.FechaUltimaVisita,
         };
     }
 
-    // ── Registrar visitante ─────────────────────────────────────────
     public async Task<VisitanteResponse> RegistrarVisitanteAsync(
         CrearVisitanteRequest req, string ip)
     {
-        // 1. Obtener o crear perfil de persona
         var persona = await ObtenerOCrearPersonaAsync(
             req.TipoIdentificacionId,
             req.NumeroIdentificacion,
@@ -64,62 +61,60 @@ public class AccesoService : IAccesoService
             req.Telefono,
             req.Email);
 
-        // 2. Crear registro de visitante
-        // GuardiaEntradaId = 1 (guardia sistema/pendiente).
-        // La aprobación real la hace el guardia desde la app móvil.
         var registro = new RegistroVisitante
         {
-            PersonaId             = persona.Id,
-            AreaId                = req.AreaId,
-            MotivoId              = req.MotivoId,
-            FechaEntrada          = DateTime.Now,
-            GuardiaEntradaId      = 1,               // pendiente de asignación por guardia
-            EstadoAcceso          = "Pendiente",
+            PersonaId = persona.Id,
+            AreaId = req.AreaId,
+            MotivoId = req.MotivoId,
+            FechaEntrada = DateTime.Now,
+            GuardiaEntradaId = 1,
+            EstadoAcceso = "Pendiente",
             ConsentimientoFirmado = req.ConsentimientoFirmado,
-            Observaciones         = req.Observaciones,
-            IPSolicitud           = ip,
-            FechaCreacion         = DateTime.Now,
+            Observaciones = req.Observaciones,
+            IPSolicitud = ip,
+            FechaCreacion = DateTime.Now,
         };
 
         _db.RegistrosVisitantes.Add(registro);
 
-        // 3. Crear solicitud pendiente para SignalR
         var solicitud = new SolicitudPendiente
         {
-            TipoRegistro  = "Visitante",
-            RegistroId    = 0,     // se actualiza tras SaveChanges
-            PersonaId     = persona.Id,
+            TipoRegistro = "Visitante",
+            RegistroId = 0,
+            PersonaId = persona.Id,
             FechaSolicitud = DateTime.Now,
-            Estado        = "Pendiente",
+            Estado = "Pendiente",
         };
         _db.SolicitudesPendientes.Add(solicitud);
 
         await _db.SaveChangesAsync();
 
-        // Actualizar RegistroId ahora que tenemos el Id
         solicitud.RegistroId = registro.Id;
         await _db.SaveChangesAsync();
 
-        // 4. Actualizar contadores de visita
         await ActualizarContadorAsync(persona.Id);
 
-        // 5. Notificar a guardias vía SignalR
-        await _hub.Clients.All.SendAsync("NuevaSolicitud", new
-        {
-            solicitudId  = solicitud.Id,
-            tipo         = "Visitante",
-            registroId   = registro.Id,
-            personaId    = persona.Id,
-            nombre       = persona.Nombre,
-            empresa      = persona.Empresa,
-            numId        = persona.NumeroIdentificacion,
-            motivo       = req.MotivoId,
-            hora         = registro.FechaEntrada.ToString("HH:mm"),
-        });
+        var area = await _db.Areas.FindAsync(req.AreaId);
+        var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
+
+        // ── FIX 1: los nombres de campo deben coincidir EXACTAMENTE con
+        //    la clase NuevaSolicitudEvent que la app móvil deserializa.
+        await _hub.Clients.All.SendAsync("NuevaSolicitud", new NuevaSolicitudEvent(
+            SolicitudId: solicitud.Id,
+            RegistroId: registro.Id,
+            TipoRegistro: "Visitante",
+            NombrePersona: persona.Nombre,
+            Empresa: persona.Empresa,
+            NumeroIdentificacion: persona.NumeroIdentificacion,
+            TipoID: persona.TipoIdentificacion?.Nombre ?? "",
+            Motivo: motivo?.Nombre ?? "",
+            Area: area?.Nombre ?? "",
+            FechaSolicitud: registro.FechaEntrada
+        ));
 
         await EnviarPushAGuardiasAsync(
-            titulo: $"Nueva solicitud — Visitante",
-            cuerpo: $"{persona.Nombre} · ",/*{motivo!.Nombre},*/
+            titulo: "Nueva solicitud — Visitante",
+            cuerpo: $"{persona.Nombre} · {motivo?.Nombre}",
             solicitudId: solicitud.Id,
             tipoRegistro: "Visitante");
 
@@ -127,18 +122,13 @@ public class AccesoService : IAccesoService
             "Visitante registrado: PersonaId={PersonaId}, RegistroId={RegistroId}",
             persona.Id, registro.Id);
 
-        // 6. Obtener nombres para la respuesta
-        var area   = await _db.Areas.FindAsync(req.AreaId);
-        var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
-
         return new VisitanteResponse(
             registro.Id, persona.Id, persona.Nombre,
             area!.Nombre, motivo!.Nombre, registro.EstadoAcceso, registro.FechaEntrada,
-            persona.TotalVisitas > 0,    // EsRecurrente
+            persona.TotalVisitas > 0,
             persona.TotalVisitas);
     }
 
-    // ── Registrar proveedor ─────────────────────────────────────────
     public async Task<ProveedorResponse> RegistrarProveedorAsync(
         CrearProveedorRequest req, string ip)
     {
@@ -152,28 +142,28 @@ public class AccesoService : IAccesoService
 
         var registro = new RegistroProveedor
         {
-            PersonaId             = persona.Id,
-            MotivoId              = req.MotivoId,
-            FechaEntrada          = DateTime.Now,
-            UnidadPlacas          = req.UnidadPlacas,
-            FacturaRemision       = req.FacturaRemision,
-            GuardiaEntradaId      = 1,
-            EstadoAcceso          = "Pendiente",
+            PersonaId = persona.Id,
+            MotivoId = req.MotivoId,
+            FechaEntrada = DateTime.Now,
+            UnidadPlacas = req.UnidadPlacas,
+            FacturaRemision = req.FacturaRemision,
+            GuardiaEntradaId = 1,
+            EstadoAcceso = "Pendiente",
             ConsentimientoFirmado = req.ConsentimientoFirmado,
-            Observaciones         = req.Observaciones,
-            IPSolicitud           = ip,
-            FechaCreacion         = DateTime.Now,
+            Observaciones = req.Observaciones,
+            IPSolicitud = ip,
+            FechaCreacion = DateTime.Now,
         };
 
         _db.RegistrosProveedores.Add(registro);
 
         var solicitud = new SolicitudPendiente
         {
-            TipoRegistro   = "Proveedor",
-            RegistroId     = 0,
-            PersonaId      = persona.Id,
+            TipoRegistro = "Proveedor",
+            RegistroId = 0,
+            PersonaId = persona.Id,
             FechaSolicitud = DateTime.Now,
-            Estado         = "Pendiente",
+            Estado = "Pendiente",
         };
         _db.SolicitudesPendientes.Add(solicitud);
 
@@ -184,23 +174,24 @@ public class AccesoService : IAccesoService
 
         await ActualizarContadorAsync(persona.Id);
 
-        await _hub.Clients.All.SendAsync("NuevaSolicitud", new
-        {
-            solicitudId = solicitud.Id,
-            tipo        = "Proveedor",
-            registroId  = registro.Id,
-            personaId   = persona.Id,
-            nombre      = persona.Nombre,
-            empresa     = persona.Empresa,
-            numId       = persona.NumeroIdentificacion,
-            placas      = registro.UnidadPlacas,
-            factura     = registro.FacturaRemision,
-            motivo      = req.MotivoId,
-            hora        = registro.FechaEntrada.ToString("HH:mm"),
-        });
+        var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
+
+        // ── FIX 1: mismos nombres de campo que NuevaSolicitudEvent
+        await _hub.Clients.All.SendAsync("NuevaSolicitud", new NuevaSolicitudEvent(
+            SolicitudId: solicitud.Id,
+            RegistroId: registro.Id,
+            TipoRegistro: "Proveedor",
+            NombrePersona: persona.Nombre,
+            Empresa: persona.Empresa,
+            NumeroIdentificacion: persona.NumeroIdentificacion,
+            TipoID: persona.TipoIdentificacion?.Nombre ?? "",
+            Motivo: motivo?.Nombre ?? "",
+            Area: null,
+            FechaSolicitud: registro.FechaEntrada
+        ));
 
         await EnviarPushAGuardiasAsync(
-            titulo: $"Nueva solicitud — Proveedor",
+            titulo: "Nueva solicitud — Proveedor",
             cuerpo: $"{persona.Nombre} · {persona.Empresa}",
             solicitudId: solicitud.Id,
             tipoRegistro: "Proveedor");
@@ -209,68 +200,17 @@ public class AccesoService : IAccesoService
             "Proveedor registrado: PersonaId={PersonaId}, RegistroId={RegistroId}",
             persona.Id, registro.Id);
 
-        var motivo = await _db.MotivosVisita.FindAsync(req.MotivoId);
-
         return new ProveedorResponse(
             registro.Id, persona.Id, persona.Nombre,
-            persona.Empresa!, motivo!.Nombre, registro.EstadoAcceso, registro.FechaEntrada,
+            persona.Empresa ?? "", motivo!.Nombre, registro.EstadoAcceso, registro.FechaEntrada,
             persona.TotalVisitas > 0,
             persona.TotalVisitas);
     }
 
-    // ── Helpers privados ────────────────────────────────────────────
-
-    /// <summary>
-    /// Busca un perfil por TipoId+NumeroId; si no existe, lo crea.
-    /// Si ya existe pero cambió el nombre, actualiza el nombre.
-    /// </summary>
-    private async Task<Persona> ObtenerOCrearPersonaAsync(
-        int tipoId, string numId, string nombre,
-        string? empresa, string? telefono, string? email)
-    {
-        var persona = await _db.Personas
-            .FirstOrDefaultAsync(p =>
-                p.TipoIdentificacionId == tipoId &&
-                p.NumeroIdentificacion  == numId);
-
-        if (persona is null)
-        {
-            persona = new Persona
-            {
-                TipoIdentificacionId = tipoId,
-                NumeroIdentificacion = numId,
-                Nombre               = nombre,
-                Empresa              = empresa,
-                Telefono             = telefono,
-                Email                = email,
-                FechaRegistro        = DateTime.Now,
-                TotalVisitas         = 0,
-                Activo               = true,
-            };
-            _db.Personas.Add(persona);
-            await _db.SaveChangesAsync();
-        }
-        else
-        {
-            // Actualizar datos opcionales si hay cambio
-            bool changed = false;
-            if (persona.Nombre != nombre) { persona.Nombre = nombre; changed = true; }
-            if (empresa  is not null && persona.Empresa  != empresa)  { persona.Empresa  = empresa;  changed = true; }
-            if (telefono is not null && persona.Telefono != telefono) { persona.Telefono = telefono; changed = true; }
-            if (email    is not null && persona.Email    != email)    { persona.Email    = email;    changed = true; }
-            if (changed) await _db.SaveChangesAsync();
-        }
-
-        return persona;
-    }
-
-    // ── Métodos para Guardias ───────────────────────────────────────
-
     public async Task<IEnumerable<SolicitudPendienteResponse>> ObtenerSolicitudesPendientesAsync()
     {
         var solicitudes = await _db.SolicitudesPendientes
-            .Include(s => s.Persona)
-            .ThenInclude(p => p.TipoIdentificacion)
+            .Include(s => s.Persona).ThenInclude(p => p.TipoIdentificacion)
             .Where(s => s.Estado == "Pendiente")
             .ToListAsync();
 
@@ -278,8 +218,8 @@ public class AccesoService : IAccesoService
 
         foreach (var s in solicitudes)
         {
-            string motivo = string.Empty;
-            string area = string.Empty;
+            string motivo = "";
+            string area = "";
 
             if (s.TipoRegistro == "Visitante")
             {
@@ -322,7 +262,6 @@ public class AccesoService : IAccesoService
     {
         var respuestas = new List<AccesoActivoResponse>();
 
-        // Visitantes activos
         var visitantes = await _db.RegistrosVisitantes
             .Include(r => r.Persona)
             .Include(r => r.Area)
@@ -339,7 +278,6 @@ public class AccesoService : IAccesoService
             Area: v.Area.Nombre
         )));
 
-        // Proveedores activos
         var proveedores = await _db.RegistrosProveedores
             .Include(r => r.Persona)
             .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
@@ -389,8 +327,15 @@ public class AccesoService : IAccesoService
 
         await _db.SaveChangesAsync();
 
-        // Notificar por SignalR a la web que se aprobó
-        await _hub.Clients.All.SendAsync("SolicitudAprobada", request.SolicitudId);
+        var guardia = await _db.Guardias.FindAsync(request.GuardiaId);
+
+        // ── FIX 2: el evento se llama "SolicitudResuelta" en ambos casos
+        //    y manda el DTO tipado para que la app móvil pueda deserializarlo.
+        await _hub.Clients.All.SendAsync("SolicitudResuelta", new SolicitudResueltaEvent(
+            SolicitudId: request.SolicitudId,
+            Estado: "Aprobado",
+            NombreGuardia: guardia?.Nombre ?? ""
+        ));
 
         return true;
     }
@@ -430,8 +375,14 @@ public class AccesoService : IAccesoService
 
         await _db.SaveChangesAsync();
 
-        // Notificar por SignalR a la web que se rechazó
-        await _hub.Clients.All.SendAsync("SolicitudRechazada", request.SolicitudId);
+        var guardia = await _db.Guardias.FindAsync(request.GuardiaId);
+
+        // ── FIX 2: mismo nombre "SolicitudResuelta" — la app escucha solo este evento
+        await _hub.Clients.All.SendAsync("SolicitudResuelta", new SolicitudResueltaEvent(
+            SolicitudId: request.SolicitudId,
+            Estado: "Rechazado",
+            NombreGuardia: guardia?.Nombre ?? ""
+        ));
 
         return true;
     }
@@ -463,15 +414,6 @@ public class AccesoService : IAccesoService
         return true;
     }
 
-    private async Task ActualizarContadorAsync(int personaId)
-    {
-        var persona = await _db.Personas.FindAsync(personaId);
-        if (persona is null) return;
-        persona.TotalVisitas++;
-        persona.FechaUltimaVisita = DateTime.Now;
-        await _db.SaveChangesAsync();
-    }
-
     public async Task<bool> GuardarFcmTokenAsync(int guardiaId, string fcmToken)
     {
         var guardia = await _db.Guardias.FindAsync(guardiaId);
@@ -481,8 +423,17 @@ public class AccesoService : IAccesoService
         return true;
     }
 
+    private async Task ActualizarContadorAsync(int personaId)
+    {
+        var persona = await _db.Personas.FindAsync(personaId);
+        if (persona is null) return;
+        persona.TotalVisitas++;
+        persona.FechaUltimaVisita = DateTime.Now;
+        await _db.SaveChangesAsync();
+    }
+
     private async Task EnviarPushAGuardiasAsync(
-    string titulo, string cuerpo, int solicitudId, string tipoRegistro)
+        string titulo, string cuerpo, int solicitudId, string tipoRegistro)
     {
         var tokens = await _db.Guardias
             .Where(g => g.Activo && g.FcmToken != null)
@@ -492,10 +443,44 @@ public class AccesoService : IAccesoService
         foreach (var token in tokens)
         {
             await _fcm.EnviarAsync(token, titulo, cuerpo, new Dictionary<string, string>
-        {
-            { "solicitudId", solicitudId.ToString() },
-            { "tipoRegistro", tipoRegistro }
-        });
+            {
+                { "solicitudId", solicitudId.ToString() },
+                { "tipoRegistro", tipoRegistro }
+            });
         }
+    }
+
+    private async Task<Persona> ObtenerOCrearPersonaAsync(
+        int tipoIdId, string numId, string nombre,
+        string? empresa, string? telefono, string? email)
+    {
+        var persona = await _db.Personas
+            .Include(p => p.TipoIdentificacion)
+            .FirstOrDefaultAsync(p => p.NumeroIdentificacion == numId && p.Activo);
+
+        if (persona is not null)
+        {
+            persona.Nombre = nombre;
+            persona.Empresa = empresa ?? persona.Empresa;
+            persona.Telefono = telefono ?? persona.Telefono;
+            persona.Email = email ?? persona.Email;
+            await _db.SaveChangesAsync();
+            return persona;
+        }
+
+        persona = new Persona
+        {
+            TipoIdentificacionId = tipoIdId,
+            NumeroIdentificacion = numId,
+            Nombre = nombre,
+            Empresa = empresa,
+            Telefono = telefono,
+            Email = email,
+            Activo = true,
+            FechaRegistro = DateTime.Now,
+        };
+        _db.Personas.Add(persona);
+        await _db.SaveChangesAsync();
+        return persona;
     }
 }

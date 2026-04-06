@@ -32,7 +32,7 @@ public partial class SolicitudesViewModel : BaseViewModel
 
         _signalR.NuevaSolicitudRecibida += OnNuevaSolicitud;
         _signalR.EstadoConexionCambiado += OnEstadoCambiado;
-        _signalR.SolicitudResuelta += OnSolicitudResuelta; 
+        _signalR.SolicitudResuelta += OnSolicitudResuelta;
     }
 
     [RelayCommand]
@@ -55,7 +55,8 @@ public partial class SolicitudesViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las solicitudes: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlert(
+                "Error", $"No se pudieron cargar las solicitudes: {ex.Message}", "OK");
         }
         finally
         {
@@ -72,10 +73,8 @@ public partial class SolicitudesViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task IrAActivosAsync()
-    {
+    private async Task IrAActivosAsync() =>
         await Shell.Current.GoToAsync("//AccesosActivos");
-    }
 
     [RelayCommand]
     private void CerrarSesion()
@@ -94,7 +93,8 @@ public partial class SolicitudesViewModel : BaseViewModel
         {
             EstadoConexion = "Sin conexión";
             ColorEstadoConexion = Colors.Red;
-            await Shell.Current.DisplayAlert("SignalR", $"No se pudo conectar: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlert(
+                "SignalR", $"No se pudo conectar: {ex.Message}", "OK");
         }
     }
 
@@ -118,7 +118,6 @@ public partial class SolicitudesViewModel : BaseViewModel
         CantidadPendientes = Solicitudes.Count;
         SinSolicitudes = false;
 
-        // Notificación local
         EnviarNotificacionLocal(solicitud);
     }
 
@@ -142,27 +141,36 @@ public partial class SolicitudesViewModel : BaseViewModel
             BadgeNumber = 1,
             CategoryType = NotificationCategoryType.Status,
             Android =
-        {
-            ChannelId = "acceso_control",
-            Priority = AndroidPriority.High,
-            IsGroupSummary = false
-        }
+            {
+                ChannelId = "acceso_control",
+                Priority = AndroidPriority.High,
+                IsGroupSummary = false
+            }
         };
-
         LocalNotificationCenter.Current.Show(notification);
     }
 
     private void OnSolicitudResuelta(int solicitudId, string estado)
     {
-        var item = Solicitudes.FirstOrDefault(s => s.SolicitudId == solicitudId);
-        if (item is not null)
+        MainThread.BeginInvokeOnMainThread(async () =>
         {
-            MainThread.BeginInvokeOnMainThread(() =>
+            if (solicitudId > 0)
             {
-                Solicitudes.Remove(item);
-                CantidadPendientes = Solicitudes.Count;
-                SinSolicitudes = Solicitudes.Count == 0;
-            });
-        }
+                // Tenemos el id exacto: quitar solo esa solicitud
+                var item = Solicitudes.FirstOrDefault(s => s.SolicitudId == solicitudId);
+                if (item is not null)
+                {
+                    Solicitudes.Remove(item);
+                    CantidadPendientes = Solicitudes.Count;
+                    SinSolicitudes = Solicitudes.Count == 0;
+                }
+            }
+            else
+            {
+                // El servidor no mandó un id parseable: recargar toda la lista
+                // para mantener sincronía (fallback seguro)
+                await CargarSolicitudesAsync();
+            }
+        });
     }
 }

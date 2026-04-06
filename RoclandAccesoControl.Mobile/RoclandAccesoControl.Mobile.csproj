@@ -31,7 +31,7 @@
 		<ApplicationTitle>RoclandAccesoControl.Mobile</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.roclandaccesocontrol.mobile</ApplicationId>
+		<ApplicationId>com.rocland.accesocontrol</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -78,11 +78,9 @@
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Maui" Version="14.0.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-		<PackageReference Include="FirebaseAdmin" Version="3.5.0" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.5" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.51" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.5" />
-		<PackageReference Include="Plugin.FirebasePushNotification" Version="3.4.35" />
 		<PackageReference Include="Plugin.LocalNotification" Version="14.1.0" />
 	</ItemGroup>
 

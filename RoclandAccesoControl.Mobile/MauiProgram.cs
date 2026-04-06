@@ -16,7 +16,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
-            .UseLocalNotification()
+            .UseLocalNotification()   // Plugin.LocalNotification — solo inicialización, sin iOS
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

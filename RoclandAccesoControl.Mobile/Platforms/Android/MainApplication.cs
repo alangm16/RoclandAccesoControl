@@ -1,47 +1,24 @@
 ﻿using Android.App;
 using Android.Runtime;
-using Plugin.FirebasePushNotification;
 
-namespace RoclandAccesoControl.Mobile
+namespace RoclandAccesoControl.Mobile;
+
+[Application]
+public class MainApplication : MauiApplication
 {
-    [Application]
-    public class MainApplication : MauiApplication
+    public MainApplication(IntPtr handle, JniHandleOwnership ownership)
+        : base(handle, ownership)
     {
-        public MainApplication(IntPtr handle, JniHandleOwnership ownership)
-            : base(handle, ownership)
-        {
-        }
+    }
 
-        protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+    protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
-        public override void OnCreate()
-        {
-            base.OnCreate();
+    public override void OnCreate()
+    {
+        base.OnCreate();
 
-            // También puedes suscribirte al evento de apertura
-            CrossFirebasePushNotification.Current.OnNotificationOpened += (s, e) =>
-            {
-                // Llamamos a un método que definiremos más abajo
-                HandlePushNotificationTap(e.Data);
-            };
-        }
-
-        private void HandlePushNotificationTap(IDictionary<string, object> data)
-        {
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                if (data.TryGetValue("solicitudId", out var idObj) && idObj != null)
-                {
-                    int solicitudId = Convert.ToInt32(idObj);
-                    // Navegar al detalle (debes implementar cómo obtener la solicitud)
-                    await Shell.Current.GoToAsync($"//Solicitudes/DetalleSolicitudPage?SolicitudId={solicitudId}");
-                }
-                else
-                {
-                    // Si no hay ID, solo vamos a la lista
-                    await Shell.Current.GoToAsync("//Solicitudes");
-                }
-            });
-        }
+        // Las notificaciones push cuando la app está cerrada las maneja
+        // MyFirebaseMessagingService automáticamente.
+        // La navegación al tap se gestiona en AppShell a través del Intent.
     }
 }

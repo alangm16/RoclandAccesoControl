@@ -1,7 +1,6 @@
 ﻿using Android.App;
 using Android.Content.PM;
 using Android.OS;
-using Android.Runtime;
 using Firebase;
 
 namespace RoclandAccesoControl.Mobile;
@@ -47,11 +46,14 @@ public class MainActivity : MauiAppCompatActivity
         }
     }
 
-    public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Android.Content.PM.Permission[] grantResults)
+    public override void OnRequestPermissionsResult(
+        int requestCode, string[] permissions, Permission[] grantResults)
     {
-        if (requestCode == 101 && grantResults.Length > 0 && grantResults[0] == Android.Content.PM.Permission.Granted)
+        if (requestCode == 101
+            && grantResults.Length > 0
+            && grantResults[0] == Permission.Granted)
         {
-            // Permiso concedido
+            System.Diagnostics.Debug.WriteLine("[FCM] Permiso de notificaciones concedido.");
         }
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
     }
