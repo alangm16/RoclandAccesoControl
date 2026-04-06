@@ -2,6 +2,7 @@
 using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
+using Firebase;
 
 namespace RoclandAccesoControl.Mobile;
 
@@ -14,6 +15,7 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        FirebaseApp.InitializeApp(this);
         CrearCanalNotificaciones();
         SolicitarPermisoNotificaciones();
     }
@@ -43,5 +45,14 @@ public class MainActivity : MauiAppCompatActivity
             RequestPermissions(
                 new[] { Android.Manifest.Permission.PostNotifications }, 101);
         }
+    }
+
+    public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Android.Content.PM.Permission[] grantResults)
+    {
+        if (requestCode == 101 && grantResults.Length > 0 && grantResults[0] == Android.Content.PM.Permission.Granted)
+        {
+            // Permiso concedido
+        }
+        base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 }

@@ -9,17 +9,19 @@ public partial class LoginViewModel : BaseViewModel
 {
     private readonly ApiService _api;
     private readonly AuthStateService _auth;
+    private readonly FcmTokenService _fcmTokenService;
 
     [ObservableProperty] private string _usuario = string.Empty;
     [ObservableProperty] private string _password = string.Empty;
     [ObservableProperty] private string _mensajeError = string.Empty;
     [ObservableProperty] private bool _hayError;
 
-    public LoginViewModel(ApiService api, AuthStateService auth)
+    public LoginViewModel(ApiService api, AuthStateService auth, FcmTokenService fcmTokenService)
     {
         _api = api;
         _auth = auth;
         Titulo = "Guardia — Acceso";
+        _fcmTokenService = fcmTokenService;
     }
 
     [RelayCommand]
@@ -45,6 +47,8 @@ public partial class LoginViewModel : BaseViewModel
             }
 
             _auth.GuardarSesion(result.Token, result.Nombre, result.Id);
+
+            await _fcmTokenService.RegistrarTokenAsync();
 
             // Navegar al shell principal
             await Shell.Current.GoToAsync("//Solicitudes");

@@ -13,6 +13,7 @@ public partial class App : Application
 
         // MainPage DEBE asignarse en el constructor
         MainPage = new AppShell();
+
     }
 
     protected override async void OnStart()
