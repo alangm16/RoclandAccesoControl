@@ -47,4 +47,11 @@ public class GuardiasController : ControllerBase
         var ok = await _acceso.MarcarSalidaAsync(request);
         return ok ? Ok() : BadRequest("No se pudo registrar la salida.");
     }
+
+    [HttpPost("fcm-token")]
+    public async Task<IActionResult> RegistrarFcmToken([FromBody] RegistrarFcmTokenRequest request)
+    {
+        var ok = await _acceso.GuardarFcmTokenAsync(request.GuardiaId, request.FcmToken);
+        return ok ? Ok() : BadRequest("No se pudo guardar el token.");
+    }
 }

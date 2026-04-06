@@ -13,15 +13,18 @@ public class AccesoService : IAccesoService
     private readonly RoclandDbContext _db;
     private readonly IHubContext<AccesoHub> _hub;
     private readonly ILogger<AccesoService> _logger;
+    private readonly IFcmService _fcm;
 
     public AccesoService(
         RoclandDbContext db,
         IHubContext<AccesoHub> hub,
-        ILogger<AccesoService> logger)
+        ILogger<AccesoService> logger,
+        IFcmService fcm)
     {
         _db     = db;
         _hub    = hub;
         _logger = logger;
+        _fcm = fcm;
     }
 
     // ── Buscar persona por número de identificación ─────────────────
@@ -114,6 +117,12 @@ public class AccesoService : IAccesoService
             hora         = registro.FechaEntrada.ToString("HH:mm"),
         });
 
+        await EnviarPushAGuardiasAsync(
+            titulo: $"Nueva solicitud — Visitante",
+            cuerpo: $"{persona.Nombre} · ",/*{motivo!.Nombre},*/
+            solicitudId: solicitud.Id,
+            tipoRegistro: "Visitante");
+
         _logger.LogInformation(
             "Visitante registrado: PersonaId={PersonaId}, RegistroId={RegistroId}",
             persona.Id, registro.Id);
@@ -189,6 +198,12 @@ public class AccesoService : IAccesoService
             motivo      = req.MotivoId,
             hora        = registro.FechaEntrada.ToString("HH:mm"),
         });
+
+        await EnviarPushAGuardiasAsync(
+            titulo: $"Nueva solicitud — Proveedor",
+            cuerpo: $"{persona.Nombre} · {persona.Empresa}",
+            solicitudId: solicitud.Id,
+            tipoRegistro: "Proveedor");
 
         _logger.LogInformation(
             "Proveedor registrado: PersonaId={PersonaId}, RegistroId={RegistroId}",
@@ -455,5 +470,32 @@ public class AccesoService : IAccesoService
         persona.TotalVisitas++;
         persona.FechaUltimaVisita = DateTime.Now;
         await _db.SaveChangesAsync();
+    }
+
+    public async Task<bool> GuardarFcmTokenAsync(int guardiaId, string fcmToken)
+    {
+        var guardia = await _db.Guardias.FindAsync(guardiaId);
+        if (guardia is null) return false;
+        guardia.FcmToken = fcmToken;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    private async Task EnviarPushAGuardiasAsync(
+    string titulo, string cuerpo, int solicitudId, string tipoRegistro)
+    {
+        var tokens = await _db.Guardias
+            .Where(g => g.Activo && g.FcmToken != null)
+            .Select(g => g.FcmToken!)
+            .ToListAsync();
+
+        foreach (var token in tokens)
+        {
+            await _fcm.EnviarAsync(token, titulo, cuerpo, new Dictionary<string, string>
+        {
+            { "solicitudId", solicitudId.ToString() },
+            { "tipoRegistro", tipoRegistro }
+        });
+        }
     }
 }

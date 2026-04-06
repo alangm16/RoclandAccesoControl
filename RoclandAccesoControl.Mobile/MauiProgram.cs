@@ -28,6 +28,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ApiService>();
         builder.Services.AddSingleton<SignalRService>();
         builder.Services.AddSingleton<AuthStateService>();
+        builder.Services.AddSingleton<FcmTokenService>();
 
         // ── ViewModels ─────────────────────────────────────────────────
         builder.Services.AddTransient<LoginViewModel>();

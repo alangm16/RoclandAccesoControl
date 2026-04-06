@@ -32,6 +32,7 @@ public partial class SolicitudesViewModel : BaseViewModel
 
         _signalR.NuevaSolicitudRecibida += OnNuevaSolicitud;
         _signalR.EstadoConexionCambiado += OnEstadoCambiado;
+        _signalR.SolicitudResuelta += OnSolicitudResuelta; 
     }
 
     [RelayCommand]
@@ -149,5 +150,19 @@ public partial class SolicitudesViewModel : BaseViewModel
         };
 
         LocalNotificationCenter.Current.Show(notification);
+    }
+
+    private void OnSolicitudResuelta(int solicitudId, string estado)
+    {
+        var item = Solicitudes.FirstOrDefault(s => s.SolicitudId == solicitudId);
+        if (item is not null)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Solicitudes.Remove(item);
+                CantidadPendientes = Solicitudes.Count;
+                SinSolicitudes = Solicitudes.Count == 0;
+            });
+        }
     }
 }

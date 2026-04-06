@@ -12,4 +12,5 @@ public interface IAccesoService
     Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request);
     Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request);
     Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request);
+    ask<bool> GuardarFcmTokenAsync(int guardiaId, string fcmToken);
 }

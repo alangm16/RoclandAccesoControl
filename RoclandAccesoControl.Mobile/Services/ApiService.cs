@@ -92,4 +92,15 @@ public class ApiService
         _http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _auth.Token);
     }
+
+    // ── Registrar token FCM ────────────────────────────────────────────
+    public async Task<bool> RegistrarFcmTokenAsync(int guardiaId, string fcmToken)
+    {
+        SetAuthHeader();
+        var resp = await _http.PostAsync("/api/guardias/fcm-token",
+            new StringContent(
+                JsonSerializer.Serialize(new { guardiaId, fcmToken }),
+                Encoding.UTF8, "application/json"));
+        return resp.IsSuccessStatusCode;
+    }
 }

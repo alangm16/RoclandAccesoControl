@@ -16,6 +16,6 @@ public partial class SolicitudesPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        //await _vm.InicializarCommand.ExecuteAsync(null);
+        await _vm.InicializarCommand.ExecuteAsync(null);
     }
 }

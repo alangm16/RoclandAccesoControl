@@ -141,6 +141,7 @@ builder.Services.AddScoped<IAccesoService, AccesoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddHostedService<CierreAutomaticoService>();
+builder.Services.AddHttpClient<IFcmService, FcmService>();
 
 // ── Seguridad: Headers HTTP ────────────────────────────────────────────
 builder.Services.AddHsts(options =>

@@ -41,3 +41,8 @@ public record AccesoActivoResponse(
     DateTime FechaEntrada,
     string Area
 );
+
+public record RegistrarFcmTokenRequest(
+    int GuardiaId,
+    string FcmToken
+);

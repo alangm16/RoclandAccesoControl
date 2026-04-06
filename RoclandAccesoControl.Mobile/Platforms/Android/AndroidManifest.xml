@@ -1,6 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:supportsRtl="true"></application>
+	<application android:allowBackup="true"
+				 android:icon="@mipmap/appicon"
+				 android:supportsRtl="true">
+
+		<!-- Servicio que recibe mensajes FCM cuando la app está cerrada -->
+		<service
+		  android:name="com.google.firebase.messaging.FirebaseMessagingService"
+		  android:exported="false">
+			<intent-filter>
+				<action android:name="com.google.firebase.MESSAGING_EVENT" />
+			</intent-filter>
+		</service>
+
+	</application>
+
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
