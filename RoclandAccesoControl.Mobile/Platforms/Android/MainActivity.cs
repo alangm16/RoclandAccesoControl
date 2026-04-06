@@ -1,7 +1,11 @@
 ﻿using Android.App;
 using Android.Content.PM;
+using Android.Gms.Tasks;
 using Android.OS;
+using Android.Util;
 using Firebase;
+using Firebase.Messaging;
+using System.Threading.Tasks;
 
 namespace RoclandAccesoControl.Mobile;
 
@@ -15,8 +19,30 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
         FirebaseApp.InitializeApp(this);
-        CrearCanalNotificaciones();
+
+        var app = FirebaseApp.InitializeApp(this);
+        if (app == null)
+            Log.Error("FCM", "Firebase no se inicializó correctamente");
+        else
+            Log.Debug("FCM", "Firebase inicializado correctamente");
+
+            _ = GetFcmTokenAsync();
+         CrearCanalNotificaciones();
         SolicitarPermisoNotificaciones();
+    }
+
+    private async System.Threading.Tasks.Task GetFcmTokenAsync()
+    {
+        try
+        {
+            var androidTask = FirebaseMessaging.Instance.GetToken();
+            string token = await androidTask.ToSystemTask(); // usa el helper estático
+            Android.Util.Log.Debug("FCM", $"Token obtenido: {token}");
+        }
+        catch (Exception ex)
+        {
+            Android.Util.Log.Error("FCM", $"Error al obtener token: {ex.Message}");
+        }
     }
 
     private void CrearCanalNotificaciones()

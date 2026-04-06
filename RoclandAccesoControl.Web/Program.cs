@@ -174,8 +174,8 @@ builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("FormSubmissionLimit", opt =>
     {
-        opt.Window = TimeSpan.FromMinutes(5);
-        opt.PermitLimit = 3;
+        opt.Window = TimeSpan.FromMinutes(3);
+        opt.PermitLimit = 10;
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 0;
     });
