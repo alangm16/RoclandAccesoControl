@@ -35,21 +35,15 @@ public class MyFirebaseMessagingService : FirebaseMessagingService
     {
         base.OnMessageReceived(message);
 
-        // Extraer título y cuerpo usando TryGetValue
-        string titulo = "Nueva solicitud";
-        if (message.Data.TryGetValue("title", out var titleValue))
-            titulo = titleValue;
+        // Se extraen del nodo Notification nativo en vez de Data
+        string titulo = message.GetNotification()?.Title ?? "Nueva solicitud";
+        string cuerpo = message.GetNotification()?.Body ?? "";
 
-        string cuerpo = "";
-        if (message.Data.TryGetValue("body", out var bodyValue))
-            cuerpo = bodyValue;
-
-        // Leer solicitudId del payload de datos si viene
+        // El resto de la data (ej. solicitudId) sí viene en message.Data
         int notifId = 0;
         if (message.Data.TryGetValue("solicitudId", out var idStr))
             int.TryParse(idStr, out notifId);
 
-        // Mostrar notificación local (funciona en primer y segundo plano)
         MostrarNotificacionLocal(notifId, titulo, cuerpo);
     }
 

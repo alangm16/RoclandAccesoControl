@@ -18,7 +18,6 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        FirebaseApp.InitializeApp(this);
 
         var app = FirebaseApp.InitializeApp(this);
         if (app == null)

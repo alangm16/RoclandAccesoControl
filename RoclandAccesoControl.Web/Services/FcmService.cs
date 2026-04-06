@@ -39,13 +39,12 @@ public class FcmService : IFcmService
                     data = data ?? new Dictionary<string, string>(),
                     android = new
                     {
-                        priority = "high",
+                        priority = "HIGH",
                         notification = new
                         {
                             channel_id = "acceso_control",
-                            priority = "high",
+                            notification_priority = "PRIORITY_HIGH",
                             default_vibrate_timings = true,
-                            // click_action dirige al tap de la notificación
                             click_action = "NUEVA_SOLICITUD"
                         }
                     }
