@@ -1,0 +1,238 @@
+﻿@page
+@model RoclandAccesoControl.Web.Pages.Admin.PersonasModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Personas Frecuentes";
+    ViewData["Page"] = "personas";
+}
+
+<!-- Buscador rápido -->
+<div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;">
+    <input type="text" id="fBusqueda" class="filter-input"
+           placeholder="Buscar por nombre o número de ID..."
+           style="min-width:300px;" />
+    <button class="btn btn-primary btn-sm" onclick="buscarPersona()">Buscar</button>
+    <button class="btn btn-ghost btn-sm" onclick="cargarFrecuentes()">Ver frecuentes</button>
+</div>
+
+<!-- Tabla de personas -->
+<div class="table-card" id="tablaContainer">
+    <div class="table-header">
+        <span class="table-title" id="tablaSubtitulo">Top 20 — Más frecuentes</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>No. ID</th>
+                    <th>Tipo ID</th>
+                    <th>Empresa</th>
+                    <th>Visitas</th>
+                    <th>Última visita</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tablaPersonas">
+                <tr>
+                    <td colspan="8" class="text-muted" style="text-align:center;padding:24px;">
+                        Cargando...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Panel de detalle (se muestra al hacer clic en Ver) -->
+<div id="panelDetalle" style="display:none;margin-top:20px;">
+    <div class="table-card">
+        <div class="table-header">
+            <span class="table-title" id="detalleNombre">—</span>
+            <button class="btn btn-ghost btn-sm" onclick="cerrarDetalle()">✕ Cerrar</button>
+        </div>
+
+        <!-- Info de la persona -->
+        <div id="detalleInfo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;padding:20px;border-bottom:1px solid var(--border);">
+        </div>
+
+        <!-- Historial de esa persona -->
+        <div class="table-header" style="margin-top:0;">
+            <span class="table-title">Historial de visitas</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Área / Empresa</th>
+                        <th>Motivo</th>
+                        <th>Entrada</th>
+                        <th>Salida</th>
+                        <th>Min.</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaHistorialPersona"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function fmtDT(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleString('es-MX',
+                { day:'2-digit', month:'2-digit', year:'2-digit',
+                  hour:'2-digit', minute:'2-digit' });
+        }
+
+        function estadoBadge(e) {
+            const m = { Aprobado:'green', Salido:'green', Rechazado:'red', Pendiente:'amber' };
+            return `<span class="badge badge-${m[e]||'gray'}">${e}</span>`;
+        }
+
+        async function cargarFrecuentes() {
+            document.getElementById('tablaSubtitulo').textContent = 'Top 20 — Más frecuentes';
+            const r = await fetch('/api/admin/personas/frecuentes');
+            if (!r.ok) return;
+            const data = await r.json();
+            renderPersonas(data);
+        }
+
+        async function buscarPersona() {
+            const q = document.getElementById('fBusqueda').value.trim();
+            if (!q) { cargarFrecuentes(); return; }
+
+            // Buscamos via el endpoint de historial filtrando por búsqueda
+            const r = await fetch(`/api/admin/historial?busqueda=${encodeURIComponent(q)}&porPagina=50&pagina=1`);
+            if (!r.ok) return;
+            const data = await r.json();
+
+            // Deduplicar por PersonaId — el historial tiene NombrePersona
+            // Para simplificar mostramos resultados del historial agrupados
+            const personas = {};
+            data.items.forEach(i => {
+                if (!personas[i.nombre]) {
+                    personas[i.nombre] = {
+                        nombre: i.nombre, empresa: i.empresa,
+                        numeroIdentificacion: i.numeroIdentificacion,
+                        tipoID: i.tipoID || '—', totalVisitas: 0
+                    };
+                }
+                personas[i.nombre].totalVisitas++;
+            });
+
+            document.getElementById('tablaSubtitulo').textContent =
+                `Resultados para "${q}"`;
+            renderPersonas(Object.values(personas));
+        }
+
+        function renderPersonas(lista) {
+            const tbody = document.getElementById('tablaPersonas');
+            if (!lista.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:24px;">Sin resultados.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = lista.map((p, i) => `
+                <tr>
+                    <td class="text-muted text-mono">${i + 1}</td>
+                    <td style="font-weight:600;">${p.nombre}</td>
+                    <td class="text-mono" style="font-size:12px;">${p.numeroIdentificacion}</td>
+                    <td class="text-muted">${p.tipoID}</td>
+                    <td class="text-muted">${p.empresa || '—'}</td>
+                    <td>
+                        <span class="badge badge-blue">${p.totalVisitas}</span>
+                    </td>
+                    <td class="text-muted text-mono" style="font-size:12px;">
+                        ${p.fechaUltimaVisita ? fmtDT(p.fechaUltimaVisita) : '—'}
+                    </td>
+                    <td>
+                        <button class="btn btn-ghost btn-sm"
+                            onclick="verDetalle(${p.id}, '${p.nombre.replace(/'/g,"\\'")}')">
+                            Ver historial
+                        </button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        async function verDetalle(id, nombre) {
+            if (!id) return;
+
+            const [rPerfil, rHist] = await Promise.all([
+                fetch(`/api/admin/personas/${id}`),
+                fetch(`/api/admin/personas/${id}/historial`)
+            ]);
+            if (!rPerfil.ok) return;
+
+            const perfil = await rPerfil.json();
+            const historial = rHist.ok ? await rHist.json() : [];
+
+            document.getElementById('detalleNombre').textContent = perfil.nombre;
+            document.getElementById('detalleInfo').innerHTML = `
+                <div>
+                    <div class="kpi-label">No. Identificación</div>
+                    <div style="font-family:var(--mono);font-size:14px;color:var(--text);margin-top:4px;">
+                        ${perfil.numeroIdentificacion}
+                    </div>
+                </div>
+                <div>
+                    <div class="kpi-label">Tipo ID</div>
+                    <div style="font-size:14px;color:var(--text);margin-top:4px;">${perfil.tipoID}</div>
+                </div>
+                <div>
+                    <div class="kpi-label">Empresa</div>
+                    <div style="font-size:14px;color:var(--text);margin-top:4px;">${perfil.empresa || '—'}</div>
+                </div>
+                <div>
+                    <div class="kpi-label">Teléfono</div>
+                    <div style="font-family:var(--mono);font-size:14px;color:var(--text);margin-top:4px;">
+                        ${perfil.telefono || '—'}
+                    </div>
+                </div>
+                <div>
+                    <div class="kpi-label">Total visitas</div>
+                    <div style="font-size:24px;font-weight:700;color:var(--accent);margin-top:4px;">
+                        ${perfil.totalVisitas}
+                    </div>
+                </div>
+                <div>
+                    <div class="kpi-label">Última visita</div>
+                    <div style="font-family:var(--mono);font-size:13px;color:var(--text);margin-top:4px;">
+                        ${perfil.fechaUltimaVisita ? fmtDT(perfil.fechaUltimaVisita) : '—'}
+                    </div>
+                </div>
+                <div>
+                    <div class="kpi-label">Registrado</div>
+                    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:4px;">
+                        ${fmtDT(perfil.fechaRegistro)}
+                    </div>
+                </div>`;
+
+            document.getElementById('tablaHistorialPersona').innerHTML =
+                historial.length
+                    ? historial.map(h => `
+                        <tr>
+                            <td><span class="badge badge-${h.tipo==='Visitante'?'blue':'purple'}">${h.tipo}</span></td>
+                            <td>${h.area || h.empresa || '—'}</td>
+                            <td>${h.motivo}</td>
+                            <td class="text-mono" style="font-size:12px;">${fmtDT(h.fechaEntrada)}</td>
+                            <td class="text-mono" style="font-size:12px;">${h.fechaSalida ? fmtDT(h.fechaSalida) : '—'}</td>
+                            <td class="text-mono">${h.minutosEstancia ?? '—'}</td>
+                            <td>${estadoBadge(h.estadoAcceso)}</td>
+                        </tr>`).join('')
+                    : '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:16px;">Sin historial.</td></tr>';
+
+            document.getElementById('panelDetalle').style.display = 'block';
+            document.getElementById('panelDetalle').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cerrarDetalle() {
+            document.getElementById('panelDetalle').style.display = 'none';
+        }
+
+        cargarFrecuentes();
+    </script>
+}

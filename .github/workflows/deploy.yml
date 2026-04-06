@@ -1,0 +1,28 @@
+name: Deploy to IIS
+on:
+  push:
+    branches:
+      - master  # o master
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Import IIS module
+        shell: pwsh
+        run: Import-Module WebAdministration
+
+      - name: Stop IIS app pool
+        shell: pwsh
+        run: Stop-WebAppPool -Name "RoclandAccesoControlGuard"
+
+      - name: Copy files to IIS
+        shell: pwsh
+        run: Copy-Item -Path "$env:GITHUB_WORKSPACE\*" -Destination "C:\inetpub\wwwroot\RoclandAccesoControlGuard\" -Recurse -Force
+
+      - name: Start IIS app pool
+        shell: pwsh
+        run: Start-WebAppPool -Name "RoclandAccesoControlGuard"

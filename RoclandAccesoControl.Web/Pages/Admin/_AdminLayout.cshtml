@@ -1,0 +1,84 @@
+﻿@{
+    var usuario = User.Identity?.Name ?? "Admin";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Rocland Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-tag">ROCLAND</span>
+            <span class="brand-sub">AccesoControl</span>
+        </div>
+        <ul class="nav-links">
+            <li>
+                <a href="/Admin/Dashboard" class="nav-link @(ViewData["Page"]?.ToString() == "dashboard" ? "active" : "")">
+                    <span class="nav-icon">◈</span> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="/Admin/Historial" class="nav-link @(ViewData["Page"]?.ToString() == "historial" ? "active" : "")">
+                    <span class="nav-icon">◉</span> Historial
+                </a>
+            </li>
+            <li>
+                <a href="/Admin/Personas" class="nav-link @(ViewData["Page"]?.ToString() == "personas" ? "active" : "")">
+                    <span class="nav-icon">◎</span> Personas
+                </a>
+            </li>
+            <li>
+                <a href="/Admin/Catalogos" class="nav-link @(ViewData["Page"]?.ToString() == "catalogos" ? "active" : "")">
+                    <span class="nav-icon">◌</span> Catálogos
+                </a>
+            </li>
+            <li>
+                <a href="/Admin/Guardias" class="nav-link @(ViewData["Page"]?.ToString() == "guardias" ? "active" : "")">
+                    <span class="nav-icon">◍</span> Guardias
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <span class="sidebar-user">@usuario</span>
+            <a href="/Admin/Logout" class="logout-link">Salir →</a>
+        </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title">@ViewData["Title"]</h1>
+            <div class="topbar-actions">
+                <a href="/api/admin/exportar/excel" class="btn btn-ghost" target="_blank">
+                    ↓ Excel
+                </a>
+                <a href="/api/admin/exportar/pdf" class="btn btn-ghost" target="_blank">
+                    ↓ PDF
+                </a>
+                <span class="topbar-time" id="clock"></span>
+            </div>
+        </div>
+        <div class="page-body">
+            @RenderBody()
+        </div>
+    </main>
+
+    <script>
+        // Reloj en tiempo real
+        function tick() {
+        const el = document.getElementById('clock');
+        if (el) el.textContent = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        }
+        tick(); setInterval(tick, 1000);
+    </script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

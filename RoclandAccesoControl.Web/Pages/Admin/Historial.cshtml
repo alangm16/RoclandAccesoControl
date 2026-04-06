@@ -1,0 +1,149 @@
+﻿@page
+@model RoclandAccesoControl.Web.Pages.Admin.HistorialModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Historial de Accesos";
+    ViewData["Page"] = "historial";
+}
+
+<div class="table-card">
+    <!-- Filtros -->
+    <div class="filters-bar">
+        <input type="text" id="fBusqueda" class="filter-input"
+               placeholder="Buscar nombre, ID, empresa..." />
+        <select id="fTipo" class="filter-input" style="min-width:140px;">
+            <option value="">Todos los tipos</option>
+            <option value="Visitante">Visitante</option>
+            <option value="Proveedor">Proveedor</option>
+        </select>
+        <input type="date" id="fDesde" class="filter-input" />
+        <input type="date" id="fHasta" class="filter-input" />
+        <button class="btn btn-primary btn-sm" onclick="buscar()">Buscar</button>
+        <button class="btn btn-ghost btn-sm" onclick="limpiar()">Limpiar</button>
+    </div>
+
+    <!-- Tabla -->
+    <div style="overflow-x:auto;">
+        <table id="tablaHistorial">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Nombre</th>
+                    <th>Empresa</th>
+                    <th>No. ID</th>
+                    <th>Área / Dest.</th>
+                    <th>Motivo</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Min.</th>
+                    <th>Estado</th>
+                    <th>Gafete</th>
+                    <th>Guardia</th>
+                </tr>
+            </thead>
+            <tbody id="tablaBody">
+                <tr>
+                    <td colspan="12" class="text-muted" style="text-align:center;padding:24px;">
+                        Cargando...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    <div class="pagination">
+        <button class="page-btn" id="btnAnterior" onclick="cambiarPagina(-1)">← Anterior</button>
+        <span class="page-info" id="pageInfo">—</span>
+        <button class="page-btn" id="btnSiguiente" onclick="cambiarPagina(1)">Siguiente →</button>
+        <span class="page-info" id="totalInfo"></span>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let pagina = 1, totalPaginas = 1;
+
+        function estadoBadge(estado) {
+            const map = {
+                'Aprobado': 'green', 'Salido': 'green',
+                'Rechazado': 'red', 'Pendiente': 'amber'
+            };
+            return `<span class="badge badge-${map[estado] || 'gray'}">${estado}</span>`;
+        }
+
+        function tipoBadge(tipo) {
+            return `<span class="badge badge-${tipo === 'Visitante' ? 'blue' : 'purple'}">${tipo}</span>`;
+        }
+
+        function fmtDT(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleString('es-MX', {
+                day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'
+            });
+        }
+
+        async function buscar(p = 1) {
+            pagina = p;
+            const busqueda = document.getElementById('fBusqueda').value;
+            const tipo = document.getElementById('fTipo').value;
+            const desde = document.getElementById('fDesde').value;
+            const hasta = document.getElementById('fHasta').value;
+
+            const params = new URLSearchParams({ pagina, porPagina: 20 });
+            if (busqueda) params.append('busqueda', busqueda);
+            if (tipo) params.append('tipo', tipo);
+            if (desde) params.append('desde', desde);
+            if (hasta) params.append('hasta', hasta);
+
+            const r = await fetch(`/api/admin/historial?${params}`);
+            if (!r.ok) return;
+            const data = await r.json();
+
+            totalPaginas = Math.ceil(data.total / 20) || 1;
+            document.getElementById('pageInfo').textContent = `Página ${pagina} de ${totalPaginas}`;
+            document.getElementById('totalInfo').textContent = `${data.total} registros`;
+            document.getElementById('btnAnterior').disabled = pagina <= 1;
+            document.getElementById('btnSiguiente').disabled = pagina >= totalPaginas;
+
+            const tbody = document.getElementById('tablaBody');
+            if (!data.items.length) {
+                tbody.innerHTML = '<tr><td colspan="12" class="text-muted" style="text-align:center;padding:24px;">Sin resultados.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.items.map(r => `
+                <tr>
+                    <td>${tipoBadge(r.tipo)}</td>
+                    <td style="font-weight:500;">${r.nombre}</td>
+                    <td class="text-muted">${r.empresa || '—'}</td>
+                    <td class="text-mono" style="font-size:12px;">${r.numeroIdentificacion}</td>
+                    <td>${r.area || '—'}</td>
+                    <td>${r.motivo}</td>
+                    <td class="text-mono" style="font-size:12px;">${fmtDT(r.fechaEntrada)}</td>
+                    <td class="text-mono" style="font-size:12px;">${r.fechaSalida ? fmtDT(r.fechaSalida) : '—'}</td>
+                    <td class="text-mono">${r.minutosEstancia ?? '—'}</td>
+                    <td>${estadoBadge(r.estadoAcceso)}</td>
+                    <td class="text-mono">${r.numeroGafete || '—'}</td>
+                    <td class="text-muted">${r.guardia}</td>
+                </tr>`).join('');
+        }
+
+        function cambiarPagina(dir) {
+            const nueva = pagina + dir;
+            if (nueva >= 1 && nueva <= totalPaginas) buscar(nueva);
+        }
+
+        function limpiar() {
+            ['fBusqueda','fTipo','fDesde','fHasta'].forEach(id => {
+                const el = document.getElementById(id);
+                el.tagName === 'SELECT' ? el.selectedIndex = 0 : (el.value = '');
+            });
+            buscar();
+        }
+
+        // Set fecha de hoy por defecto
+        document.getElementById('fDesde').value = new Date().toISOString().split('T')[0];
+        buscar();
+    </script>
+}

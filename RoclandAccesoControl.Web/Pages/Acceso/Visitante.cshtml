@@ -1,0 +1,224 @@
+@page "/Acceso/Visitante"
+@model RoclandAccesoControl.Web.Pages.Acceso.VisitanteModel
+@{
+    ViewData["Title"] = "Registro de Visitante";
+    Layout = "~/Pages/Shared/_AccesoLayout.cshtml";
+}
+
+@section Styles {
+    <style>
+        /* Ocultar campos prellenados con animación */
+        .prefilled-field { transition: background 0.3s ease; }
+        .prefilled-field.filled { background: #f0faea !important; }
+    </style>
+}
+
+<div class="fade-in">
+
+    <a href="/Acceso" class="form-page-back">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+
+    <div class="form-page-header">
+        <div class="form-page-tag">
+            <i class="bi bi-person-badge-fill"></i> Visitante
+        </div>
+        <h1 class="form-page-title">Registro de Entrada</h1>
+    </div>
+
+    <!-- ── Alert de error global ─────────────────────────────────── -->
+    <div id="alertError" class="alert-form-error" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        <span id="alertErrorMsg">Ocurrió un error al enviar el formulario.</span>
+    </div>
+
+    <form id="frmVisitante" novalidate autocomplete="off">
+        @Html.AntiForgeryToken()
+
+        <!-- ── 1. Identificación ──────────────────────────────────── -->
+        <div class="form-section-card">
+            <div class="form-section-title">
+                <i class="bi bi-fingerprint"></i> Identificación
+            </div>
+
+            <div class="row g-3">
+
+                <!-- Tipo de ID -->
+                <div class="col-12 col-sm-5">
+                    <label class="form-label" for="tipoIdentificacionId">
+                        Tipo de ID <span class="req">*</span>
+                    </label>
+                    <select id="tipoIdentificacionId" name="TipoIdentificacionId"
+                            class="form-select" required>
+                        <option value="">— Selecciona —</option>
+                        @foreach (var tipo in Model.TiposIdentificacion)
+                        {
+                            <option value="@tipo.Id">@tipo.Nombre</option>
+                        }
+                    </select>
+                    <div class="invalid-feedback">Selecciona el tipo de identificación.</div>
+                </div>
+
+                <!-- Número de ID + búsqueda -->
+                <div class="col-12 col-sm-7">
+                    <label class="form-label" for="numeroIdentificacion">
+                        Número de ID <span class="req">*</span>
+                    </label>
+                    <div class="id-search-wrapper">
+                        <input type="text" id="numeroIdentificacion"
+                               name="NumeroIdentificacion"
+                               class="form-control" required
+                               minlength="3" maxlength="60"
+                               placeholder="Ej. ABCD123456HDFXXX00"
+                               inputmode="text" autocomplete="off" />
+                        <div class="id-search-spinner">
+                            <div class="spinner-border spinner-border-sm text-success"
+                                 role="status" aria-hidden="true"></div>
+                        </div>
+                        <div class="invalid-feedback">Ingresa al menos 3 caracteres.</div>
+                    </div>
+                    <!-- Badge visitante recurrente -->
+                    <div id="returningBadge" class="returning-badge">
+                        <i class="bi bi-star-fill"></i>
+                        <span>Visitante recurrente — <strong id="returningVisits"></strong> visita(s) previas</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── 2. Datos personales ────────────────────────────────── -->
+        <div class="form-section-card">
+            <div class="form-section-title">
+                <i class="bi bi-person-lines-fill"></i> Datos Personales
+            </div>
+
+            <div class="row g-3">
+
+                <div class="col-12">
+                    <label class="form-label" for="nombre">
+                        Nombre completo <span class="req">*</span>
+                    </label>
+                    <input type="text" id="nombre" name="Nombre"
+                           class="form-control prefilled-field" required
+                           minlength="2" maxlength="150"
+                           placeholder="Como aparece en tu identificación" />
+                    <div class="invalid-feedback">El nombre es obligatorio.</div>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label" for="telefono">Teléfono</label>
+                    <input type="tel" id="telefono" name="Telefono"
+                           class="form-control prefilled-field"
+                           maxlength="20" placeholder="10 dígitos"
+                           inputmode="tel" />
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label" for="email">Correo electrónico</label>
+                    <input type="email" id="email" name="Email"
+                           class="form-control prefilled-field"
+                           maxlength="100" placeholder="correo@empresa.com"
+                           inputmode="email" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" for="empresa">Empresa / Organización</label>
+                    <input type="text" id="empresa" name="Empresa"
+                           class="form-control prefilled-field"
+                           maxlength="150" placeholder="Opcional" />
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── 3. Visita ──────────────────────────────────────────── -->
+        <div class="form-section-card">
+            <div class="form-section-title">
+                <i class="bi bi-building"></i> Información de la Visita
+            </div>
+
+            <div class="row g-3">
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label" for="areaId">
+                        Área a visitar <span class="req">*</span>
+                    </label>
+                    <select id="areaId" name="AreaId" class="form-select" required>
+                        <option value="">— Selecciona —</option>
+                        @foreach (var area in Model.Areas)
+                        {
+                            <option value="@area.Id">@area.Nombre</option>
+                        }
+                    </select>
+                    <div class="invalid-feedback">Selecciona el área.</div>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label" for="motivoId">
+                        Motivo <span class="req">*</span>
+                    </label>
+                    <select id="motivoId" name="MotivoId" class="form-select" required>
+                        <option value="">— Selecciona —</option>
+                        @foreach (var motivo in Model.Motivos)
+                        {
+                            <option value="@motivo.Id">@motivo.Nombre</option>
+                        }
+                    </select>
+                    <div class="invalid-feedback">Selecciona el motivo.</div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" for="observaciones">Observaciones</label>
+                    <textarea id="observaciones" name="Observaciones"
+                              class="form-control" rows="2"
+                              maxlength="500"
+                              placeholder="Información adicional (opcional)"></textarea>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── 4. Consentimiento ──────────────────────────────────── -->
+        <div class="form-section-card">
+            <div class="form-section-title">
+                <i class="bi bi-file-earmark-check"></i> Consentimiento
+            </div>
+
+            <div class="consent-card">
+                <p class="consent-text">
+                    Al ingresar a las instalaciones de <strong>Rocland</strong>, acepta que sus datos personales
+                    (nombre, identificación, empresa, teléfono y correo electrónico) serán registrados
+                    con la finalidad de controlar el acceso a las instalaciones. Esta información es
+                    tratada conforme a nuestra Política de Privacidad y no será compartida con terceros.
+                    Los registros son resguardados de forma segura y pueden ser consultados por personal
+                    autorizado de seguridad.
+                </p>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           id="consentimientoFirmado" name="ConsentimientoFirmado"
+                           required />
+                    <label class="form-check-label" for="consentimientoFirmado">
+                        Acepto el tratamiento de mis datos personales conforme al aviso de privacidad
+                        <span class="req">*</span>
+                    </label>
+                    <div class="invalid-feedback">Debes aceptar el consentimiento para continuar.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Botón enviar ────────────────────────────────────────── -->
+        <button type="submit" id="btnEnviar" class="btn-rocland mt-1">
+            <i class="bi bi-send-fill" id="btnIcon"></i>
+            <span id="btnText">Enviar Solicitud</span>
+            <span class="spinner-border d-none" id="btnSpinner" role="status" aria-hidden="true"></span>
+        </button>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <script src="~/js/autocompletado.js" asp-append-version="true"></script>
+    <script src="~/js/visitante-form.js" asp-append-version="true"></script>
+}

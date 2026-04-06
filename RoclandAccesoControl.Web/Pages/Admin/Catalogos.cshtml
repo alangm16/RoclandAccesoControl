@@ -1,0 +1,123 @@
+﻿@page
+@model RoclandAccesoControl.Web.Pages.Admin.CatalogosModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Catálogos";
+    ViewData["Page"] = "catalogos";
+}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
+
+    <!-- Áreas -->
+    <div class="table-card">
+        <div class="table-header">
+            <span class="table-title">Áreas</span>
+            <button class="btn btn-primary btn-sm" onclick="agregar('area')">+ Agregar</button>
+        </div>
+        <div id="nuevaArea" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;gap:8px;">
+                <input id="inputArea" type="text" class="filter-input" placeholder="Nombre del área" style="flex:1;" />
+                <button class="btn btn-primary btn-sm" onclick="crearCatalogo('area')">Guardar</button>
+                <button class="btn btn-ghost btn-sm" onclick="cancelar('area')">✕</button>
+            </div>
+        </div>
+        <table><tbody id="listaAreas"></tbody></table>
+    </div>
+
+    <!-- Motivos -->
+    <div class="table-card">
+        <div class="table-header">
+            <span class="table-title">Motivos de Visita</span>
+            <button class="btn btn-primary btn-sm" onclick="agregar('motivo')">+ Agregar</button>
+        </div>
+        <div id="nuevoMotivo" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;gap:8px;">
+                <input id="inputMotivo" type="text" class="filter-input" placeholder="Nombre del motivo" style="flex:1;" />
+                <button class="btn btn-primary btn-sm" onclick="crearCatalogo('motivo')">Guardar</button>
+                <button class="btn btn-ghost btn-sm" onclick="cancelar('motivo')">✕</button>
+            </div>
+        </div>
+        <table><tbody id="listaMotivos"></tbody></table>
+    </div>
+
+    <!-- Tipos ID -->
+    <div class="table-card">
+        <div class="table-header">
+            <span class="table-title">Tipos de Identificación</span>
+            <button class="btn btn-primary btn-sm" onclick="agregar('tipoid')">+ Agregar</button>
+        </div>
+        <div id="nuevoTipoid" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;gap:8px;">
+                <input id="inputTipoid" type="text" class="filter-input" placeholder="Ej: Pasaporte" style="flex:1;" />
+                <button class="btn btn-primary btn-sm" onclick="crearCatalogo('tipoid')">Guardar</button>
+                <button class="btn btn-ghost btn-sm" onclick="cancelar('tipoid')">✕</button>
+            </div>
+        </div>
+        <table><tbody id="listaTipoids"></tbody></table>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        const endpoints = { area: 'areas', motivo: 'motivos', tipoid: 'tiposid' };
+        const listas = { area: 'listaAreas', motivo: 'listaMotivos', tipoid: 'listaTipoids' };
+        const inputs = { area: 'inputArea', motivo: 'inputMotivo', tipoid: 'inputTipoid' };
+        const toggleEndpoints = { area: 'areas', motivo: 'motivos', tipoid: 'tiposid' };
+
+        async function cargarAreas() {
+            const r = await fetch('/api/admin/historial?porPagina=1&pagina=1'); // no tiene endpoint GET propio para catálogos
+            // Usamos el DbContext directamente desde las Razor Pages
+            // Los catálogos se cargan desde el PageModel
+        }
+
+        // Cargar catálogos del servidor (los tenemos en Model)
+        function renderCatalogo(tipo, items) {
+            const tbody = document.getElementById(listas[tipo]);
+            tbody.innerHTML = items.map(i => `
+                <tr>
+                    <td style="font-weight:500;">${i.nombre}</td>
+                    <td><span class="badge ${i.activo ? 'badge-green' : 'badge-gray'}">${i.activo ? 'Activo' : 'Inactivo'}</span></td>
+                    <td>
+                        <button class="btn btn-ghost btn-sm" onclick="toggle('${tipo}', ${i.id})">
+                            ${i.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function agregar(tipo) {
+            document.getElementById(`nuevo${capitalize(tipo)}`).style.display = 'block';
+            document.getElementById(inputs[tipo]).focus();
+        }
+        function cancelar(tipo) {
+            document.getElementById(`nuevo${capitalize(tipo)}`).style.display = 'none';
+            document.getElementById(inputs[tipo]).value = '';
+        }
+        function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+        async function crearCatalogo(tipo) {
+            const nombre = document.getElementById(inputs[tipo]).value.trim();
+            if (!nombre) return;
+            const ep = tipo === 'tipoid' ? 'tiposid' : tipo + 's';
+            await fetch(`/api/admin/${ep}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre })
+            });
+            cancelar(tipo);
+            location.reload();
+        }
+
+        async function toggle(tipo, id) {
+            const ep = tipo === 'tipoid' ? 'tiposid' : tipo + 's';
+            await fetch(`/api/admin/${ep}/${id}/toggle`, { method: 'PUT' });
+            location.reload();
+        }
+
+        // Inicializar con datos del servidor
+        renderCatalogo('area', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Areas)));
+        renderCatalogo('motivo', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Motivos)));
+        renderCatalogo('tipoid', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TiposId)));
+    </script>
+}

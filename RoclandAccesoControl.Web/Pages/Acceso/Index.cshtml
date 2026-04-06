@@ -1,0 +1,50 @@
+@page "/Acceso"
+@model RoclandAccesoControl.Web.Pages.Acceso.IndexModel
+@{
+    ViewData["Title"] = "Registro de Acceso";
+    Layout = "~/Pages/Shared/_AccesoLayout.cshtml";
+}
+
+<div class="selector-page fade-in">
+
+    <p class="form-page-back">
+        <i class="bi bi-shield-fill-check text-success"></i>
+        Rocland — Registro seguro de visitantes
+    </p>
+
+    <h1 class="selector-title">Bienvenido</h1>
+    <p class="selector-subtitle">
+        Selecciona el tipo de visita para continuar con tu registro.
+    </p>
+
+    <!-- ── Visitante ─────────────────────────────────────────────── -->
+    <a href="/Acceso/Visitante" class="type-card">
+        <div class="type-card-icon">
+            <i class="bi bi-person-badge"></i>
+        </div>
+        <div class="type-card-body">
+            <span class="type-card-label">Visitante</span>
+            <span class="type-card-desc">Visita de trabajo, reunión, entrevista o personal</span>
+        </div>
+        <i class="bi bi-chevron-right type-card-arrow"></i>
+    </a>
+
+    <!-- ── Proveedor / Cliente ────────────────────────────────────── -->
+    <a href="/Acceso/Proveedor" class="type-card">
+        <div class="type-card-icon">
+            <i class="bi bi-truck"></i>
+        </div>
+        <div class="type-card-body">
+            <span class="type-card-label">Proveedor / Cliente</span>
+            <span class="type-card-desc">Entrega de mercancía, servicio, mantenimiento o auditoría</span>
+        </div>
+        <i class="bi bi-chevron-right type-card-arrow"></i>
+    </a>
+
+    <div class="selector-note">
+        <i class="bi bi-info-circle me-1"></i>
+        Tu información es tratada conforme al <strong>Aviso de Privacidad Rocland</strong>.
+        Los datos registrados son utilizados exclusivamente para el control de acceso a las instalaciones.
+    </div>
+
+</div>

@@ -1,0 +1,255 @@
+{
+  "info": {
+    "name": "Rocland AccesoControl API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:7000"
+    },
+    {
+      "key": "jwtToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login Guardia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.collectionVariables.set('jwtToken', r.token);",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Token presente', () => pm.expect(r.token).to.not.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/guardia/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"usuario\":\"guardia1\",\"password\":\"Guardia123!\"}"
+            }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/admin/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"usuario\":\"admin\",\"password\":\"Admin123!\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Formularios (Público)",
+      "item": [
+        {
+          "name": "Registrar Visitante",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Estado Pendiente', () => pm.expect(pm.response.json().estadoAcceso).to.eql('Pendiente'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/visitantes",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nombre\":\"Test Visitante\",\"tipoIdentificacionId\":1,\"numeroIdentificacion\":\"TEST001\",\"areaId\":1,\"motivoId\":1,\"consentimientoFirmado\":true}"
+            }
+          }
+        },
+        {
+          "name": "Registrar Proveedor",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/proveedores",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nombre\":\"Test Proveedor\",\"tipoIdentificacionId\":1,\"numeroIdentificacion\":\"PROV001\",\"empresa\":\"Empresa Test\",\"motivoId\":2,\"consentimientoFirmado\":true}"
+            }
+          }
+        },
+        {
+          "name": "Buscar Persona por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Responde 200 o 404', () => pm.expect([200,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/personas/buscar?numId=TEST001"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Guardias (JWT requerido)",
+      "item": [
+        {
+          "name": "Obtener Solicitudes Pendientes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/guardias/solicitudes",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwtToken}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obtener Accesos Activos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/guardias/activos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwtToken}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sin Token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Debe retornar 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/guardias/solicitudes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "KPIs Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/kpis",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwtToken}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Exportar Excel",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/exportar/excel",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwtToken}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Exportar PDF",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/exportar/pdf",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwtToken}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
