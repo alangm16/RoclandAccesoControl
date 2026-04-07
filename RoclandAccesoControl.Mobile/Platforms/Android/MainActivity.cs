@@ -1,15 +1,19 @@
 ﻿using Android.App;
+using Android.Content;          // <-- 1. Agregado para el Intent
 using Android.Content.PM;
 using Android.Gms.Tasks;
 using Android.OS;
 using Android.Util;
 using Firebase;
 using Firebase.Messaging;
+using Plugin.LocalNotification; // <-- 2. Agregado para conectar el plugin
 using System.Threading.Tasks;
 
 namespace RoclandAccesoControl.Mobile;
 
+// 3. EL LAUNCHMODE ES CRÍTICO AQUÍ:
 [Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true,
+    LaunchMode = LaunchMode.SingleTop, // <-- ESTO FALTABA
     ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation |
     ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize |
     ConfigChanges.Density)]
@@ -25,9 +29,19 @@ public class MainActivity : MauiAppCompatActivity
         else
             Log.Debug("FCM", "Firebase inicializado correctamente");
 
-            _ = GetFcmTokenAsync();
-         CrearCanalNotificaciones();
+        _ = GetFcmTokenAsync();
+        CrearCanalNotificaciones();
         SolicitarPermisoNotificaciones();
+    }
+
+    // 4. ESTE ES EL PUENTE FALTANTE. Sin esto, el tap se pierde en el vacío.
+    protected override void OnNewIntent(Intent? intent)
+    {
+        base.OnNewIntent(intent);
+        if (intent != null)
+        {
+            LocalNotificationCenter.NotifyNotificationTapped(intent);
+        }
     }
 
     private async System.Threading.Tasks.Task GetFcmTokenAsync()
@@ -35,7 +49,7 @@ public class MainActivity : MauiAppCompatActivity
         try
         {
             var androidTask = FirebaseMessaging.Instance.GetToken();
-            string token = await androidTask.ToSystemTask(); // usa el helper estático
+            string token = await androidTask.ToSystemTask();
             Android.Util.Log.Debug("FCM", $"Token obtenido: {token}");
         }
         catch (Exception ex)

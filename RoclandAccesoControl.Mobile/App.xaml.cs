@@ -7,6 +7,7 @@ namespace RoclandAccesoControl.Mobile;
 public partial class App : Application
 {
     private readonly AuthStateService _auth;
+    private string? _idNotificacionPendiente = null;
 
     public App(AuthStateService auth)
     {
@@ -15,24 +16,21 @@ public partial class App : Application
 
         MainPage = new AppShell();
 
-        // Suscribirse al evento de "Notificación Tocada"
         LocalNotificationCenter.Current.NotificationActionTapped += OnNotificationTapped;
     }
 
-    // Método que se ejecuta cuando el usuario toca la notificación
     private void OnNotificationTapped(NotificationActionEventArgs e)
     {
-        if (e.IsTapped && !string.IsNullOrEmpty(e.Request.ReturningData))
+        // CHIVATO 1: Si sale esta alerta, Android y el Plugin están funcionando perfecto.
+        MainThread.BeginInvokeOnMainThread(async () =>
         {
-            // Recuperamos el ID que guardamos en MyFirebaseMessagingService o SignalR
-            string solicitudId = e.Request.ReturningData;
+            await Shell.Current.DisplayAlert("DEBUG 1", $"Toque detectado. Data: '{e.Request.ReturningData}'", "OK");
+        });
 
-            // Navegamos usando el hilo principal para evitar bloqueos visuales
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                // Como ya tienes registrada la ruta DetalleSolicitudPage en tu AppShell...
-                await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={solicitudId}");
-            });
+        if (!string.IsNullOrEmpty(e.Request.ReturningData))
+        {
+            _idNotificacionPendiente = e.Request.ReturningData;
+            NavegarADetalleSiEsPosible();
         }
     }
 
@@ -44,13 +42,40 @@ public partial class App : Application
         {
             var sesionRestaurada = await _auth.RestaurarSesionAsync();
             await Shell.Current.GoToAsync(sesionRestaurada ? "//Solicitudes" : "//Login");
+
+            NavegarADetalleSiEsPosible();
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlertAsync(
-                "Error de inicio",
-                $"{ex.GetType().Name}\n\n{ex.Message}\n\n{ex.InnerException?.Message}",
-                "OK");
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+    }
+
+    private void NavegarADetalleSiEsPosible()
+    {
+        if (!string.IsNullOrEmpty(_idNotificacionPendiente))
+        {
+            var id = _idNotificacionPendiente;
+            _idNotificacionPendiente = null;
+
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Task.Delay(600); // Esperamos que cargue la UI
+
+                try
+                {
+                    // CHIVATO 2: Si sale esta alerta, significa que Shell intentará viajar al Detalle
+                    await Shell.Current.DisplayAlert("DEBUG 2", $"Viajando al ID: {id}", "OK");
+
+                    // Aseguramos el enrutamiento con el nombre exacto
+                    await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={id}");
+                }
+                catch (Exception ex)
+                {
+                    // CHIVATO 3: Si la ruta está mal o hay error en el ViewModel, esto lo atrapará
+                    await Shell.Current.DisplayAlert("Error Navegación", ex.Message, "OK");
+                }
+            });
         }
     }
 }

@@ -261,18 +261,15 @@ public class AccesoService : IAccesoService
 
     public async Task<SolicitudPendienteResponse?> ObtenerSolicitudPorIdAsync(int solicitudId)
     {
-        // 1. Buscamos la solicitud específica en la base de datos
         var s = await _db.SolicitudesPendientes
             .Include(x => x.Persona).ThenInclude(p => p.TipoIdentificacion)
             .FirstOrDefaultAsync(x => x.Id == solicitudId && x.Estado == "Pendiente");
 
-        // Si no existe o ya fue procesada (Aprobada/Rechazada), devolvemos null
         if (s == null) return null;
 
         string motivo = "";
         string area = "";
 
-        // 2. Dependiendo del tipo de registro, buscamos el Área y el Motivo en sus respectivas tablas
         if (s.TipoRegistro == "Visitante")
         {
             var reg = await _db.RegistrosVisitantes
@@ -292,7 +289,6 @@ public class AccesoService : IAccesoService
             motivo = reg?.Motivo?.Nombre ?? "";
         }
 
-        // 3. Retornamos el DTO exacto que la aplicación móvil espera recibir y deserializar
         return new SolicitudPendienteResponse(
             SolicitudId: s.Id,
             RegistroId: s.RegistroId,
