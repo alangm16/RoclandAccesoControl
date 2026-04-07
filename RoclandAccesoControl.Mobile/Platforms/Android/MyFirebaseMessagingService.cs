@@ -1,7 +1,5 @@
-#if ANDROID
 using Android.App;
 using Firebase.Messaging;
-#endif
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.Core.Models;
 using Plugin.LocalNotification.Core.Models.AndroidOption;
@@ -14,8 +12,7 @@ namespace RoclandAccesoControl.Mobile.Platforms.Android;
 /// cuando la app está en primer plano.
 /// </summary>
 
-#if ANDROID
-[Service(Exported = false)]
+[Service(Exported = true, Name = "com.rocland.accesocontrol.MyFirebaseMessagingService")]
 [IntentFilter(new[] { "com.google.firebase.MESSAGING_EVENT" })]
 public class MyFirebaseMessagingService : FirebaseMessagingService
 {
@@ -77,4 +74,3 @@ public class MyFirebaseMessagingService : FirebaseMessagingService
         });
     }
 }
-#endif
