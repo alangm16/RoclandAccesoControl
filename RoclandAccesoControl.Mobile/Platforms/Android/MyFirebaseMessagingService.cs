@@ -8,10 +8,22 @@ namespace RoclandAccesoControl.Mobile.Platforms.Android;
 
 /// <summary>
 /// Servicio que recibe mensajes FCM tanto en primer plano como en segundo plano.
-/// Registra el token cuando Firebase lo renueva y muestra notificaciones locales
-/// cuando la app está en primer plano.
+///
+/// LÓGICA DE NOTIFICACIONES:
+/// ┌─────────────────┬────────────────────────────────────────────────────────────┐
+/// │ Estado de la app│ Qué pasa                                                   │
+/// ├─────────────────┼────────────────────────────────────────────────────────────┤
+/// │ Abierta          │ OnMessageReceived se llama → mostramos notificación local  │
+/// │                 │ El guardia ve el banner Y SignalR ya actualizó la lista     │
+/// ├─────────────────┼────────────────────────────────────────────────────────────┤
+/// │ Minimizada      │ OnMessageReceived se llama → mostramos notificación local  │
+/// │ (segundo plano) │ El tap navega directamente al detalle                      │
+/// ├─────────────────┼────────────────────────────────────────────────────────────┤
+/// │ Cerrada         │ FCM muestra la notificación por su cuenta (data-only no,   │
+/// │                 │ pero OnMessageReceived sí se llama en un proceso separado)  │
+/// │                 │ → mostramos notificación local que sí tiene ReturningData  │
+/// └─────────────────┴────────────────────────────────────────────────────────────┘
 /// </summary>
-
 [Service(Exported = false, Name = "com.rocland.accesocontrol.MyFirebaseMessagingService")]
 [IntentFilter(new[] { "com.google.firebase.MESSAGING_EVENT" })]
 public class MyFirebaseMessagingService : FirebaseMessagingService
@@ -29,53 +41,69 @@ public class MyFirebaseMessagingService : FirebaseMessagingService
     {
         base.OnMessageReceived(message);
 
-        // 1. Verificamos si la aplicación está abierta (Primer plano)
-        var actividadActual = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-        if (actividadActual != null)
-        {
-            // La app está abierta. SignalR se está encargando de mostrar la notificación.
-            // Firebase se retira en silencio para no duplicar avisos.
-            System.Diagnostics.Debug.WriteLine("[FCM] App en primer plano. Ignorando Firebase.");
-            return;
-        }
-
-        // 2. Si llegamos aquí, la app está minimizada o cerrada. Extraemos la Data.
-        string titulo = "Nueva solicitud";
-        if (message.Data.TryGetValue("title", out var titleStr))
+        // Extraemos la data del mensaje
+        string titulo = "Nueva solicitud de acceso";
+        if (message.Data.TryGetValue("title", out var titleStr) && !string.IsNullOrEmpty(titleStr))
             titulo = titleStr;
 
         string cuerpo = "";
         if (message.Data.TryGetValue("body", out var bodyStr))
             cuerpo = bodyStr;
 
-        int notifId = 0;
+        int solicitudId = 0;
         if (message.Data.TryGetValue("solicitudId", out var idStr))
-            int.TryParse(idStr, out notifId);
+            int.TryParse(idStr, out solicitudId);
 
-        // 3. Mostramos la notificación local
-        MostrarNotificacionLocal(notifId, titulo, cuerpo);
+        System.Diagnostics.Debug.WriteLine(
+            $"[FCM] Mensaje recibido. Título='{titulo}' SolicitudId={solicitudId}");
+
+        // ── SIEMPRE mostramos la notificación local ──────────────────────────
+        // Razón: Plugin.LocalNotification es el único que puede serializar
+        // correctamente el ReturningData en el Intent para que el tap navegue
+        // al detalle. Si dejamos que FCM muestre la notificación por su cuenta
+        // (con el nodo "notification"), el tap solo abre la app pero sin datos.
+        //
+        // Cuando la app está en PRIMER PLANO, Android bloqueará el banner del
+        // sistema pero nosotros podemos manejar la UI con SignalR. Aun así
+        // enviamos la notificación local para que aparezca el badge/banner
+        // en caso de que el usuario esté en otra pantalla dentro de la misma app.
+        MostrarNotificacionLocal(solicitudId, titulo, cuerpo);
     }
 
-    private static void MostrarNotificacionLocal(int id, string titulo, string cuerpo)
+    private static void MostrarNotificacionLocal(int solicitudId, string titulo, string cuerpo)
     {
         try
         {
+            // El ID de la notificación es el solicitudId para que sea único y reemplazable.
+            // Si solicitudId llega en 0 (no debería), usamos uno aleatorio.
+            int notifId = solicitudId > 0 ? solicitudId : new Random().Next(1000, 9999);
+
             var notif = new NotificationRequest
             {
-                NotificationId = id == 0 ? new Random().Next(1000, 9999) : id,
+                NotificationId = notifId,
                 Title = titulo,
                 Description = cuerpo,
-                ReturningData = id.ToString(), // ¡CLAVE! Aquí guardamos el ID para la navegación
+
+                // ¡CRÍTICO! ReturningData es lo que llega en e.Request.ReturningData
+                // cuando el usuario toca la notificación. Debe ser el solicitudId como string.
+                ReturningData = solicitudId.ToString(),
+
                 BadgeNumber = 1,
                 CategoryType = NotificationCategoryType.Status,
                 Android =
                 {
                     ChannelId = "acceso_control",
                     Priority = AndroidPriority.High,
-                    IsGroupSummary = false
+                    IsGroupSummary = false,
+                    // AutoCancel: la notificación desaparece cuando el usuario la toca
+                    AutoCancel = true,
                 }
             };
+
             LocalNotificationCenter.Current.Show(notif);
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[FCM] Notificación local mostrada. NotifId={notifId} ReturningData='{solicitudId}'");
         }
         catch (Exception ex)
         {
