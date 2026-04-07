@@ -67,22 +67,22 @@ builder.Services.AddAuthentication(options =>
 
         // Soporte JWT para SignalR (el token viaja en query string)
         options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
             {
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-
-                // Usamos Contains e ignoramos mayúsculas/minúsculas para garantizar que atrape el token
-                if (!string.IsNullOrEmpty(accessToken) &&
-                    path.Value != null &&
-                    path.Value.Contains("accesohub", StringComparison.OrdinalIgnoreCase))
+                OnMessageReceived = context =>
                 {
-                    context.Token = accessToken;
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    
+                    // El cambio clave: usar Contains e ignorar mayúsculas
+                    if (!string.IsNullOrEmpty(accessToken) && 
+                        path.Value != null && 
+                        path.Value.Contains("accesohub", StringComparison.OrdinalIgnoreCase))
+                    {
+                        context.Token = accessToken;
+                    }
+                    return Task.CompletedTask;
                 }
-                return Task.CompletedTask;
-            }
-        };
+            };
     })
      .AddCookie("AdminCookie", options =>
      {
