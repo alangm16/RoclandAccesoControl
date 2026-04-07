@@ -9,10 +9,10 @@ public interface IAccesoService
     Task<VisitanteResponse> RegistrarVisitanteAsync(CrearVisitanteRequest req, string ip);
     Task<ProveedorResponse> RegistrarProveedorAsync(CrearProveedorRequest req, string ip);
     Task<IEnumerable<SolicitudPendienteResponse>> ObtenerSolicitudesPendientesAsync();
+    Task<SolicitudPendienteResponse?> ObtenerSolicitudPorIdAsync(int solicitudId);
     Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync();
     Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request);
     Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request);
     Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request);
     Task<bool> GuardarFcmTokenAsync(int guardiaId, string fcmToken);
-    Task<SolicitudPendiente?> ObtenerSolicitudPorIdAsync(int solicitudId);
 }

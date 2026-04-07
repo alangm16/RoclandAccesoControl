@@ -51,55 +51,6 @@ public class AccesoService : IAccesoService
         };
     }
 
-    public async Task<SolicitudPendienteResponse?> ObtenerSolicitudPorIdAsync(int solicitudId)
-    {
-        // 1. Buscamos la solicitud específica en la base de datos
-        var s = await _db.SolicitudesPendientes
-            .Include(x => x.Persona).ThenInclude(p => p.TipoIdentificacion)
-            .FirstOrDefaultAsync(x => x.Id == solicitudId && x.Estado == "Pendiente");
-
-        // Si no existe o ya fue procesada (Aprobada/Rechazada), devolvemos null
-        if (s == null) return null;
-
-        string motivo = "";
-        string area = "";
-
-        // 2. Dependiendo del tipo de registro, buscamos el Área y el Motivo en sus respectivas tablas
-        if (s.TipoRegistro == "Visitante")
-        {
-            var reg = await _db.RegistrosVisitantes
-                .Include(r => r.Motivo)
-                .Include(r => r.Area)
-                .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
-
-            motivo = reg?.Motivo?.Nombre ?? "";
-            area = reg?.Area?.Nombre ?? "";
-        }
-        else if (s.TipoRegistro == "Proveedor")
-        {
-            var reg = await _db.RegistrosProveedores
-                .Include(r => r.Motivo)
-                .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
-
-            motivo = reg?.Motivo?.Nombre ?? "";
-        }
-
-        // 3. Retornamos el DTO exacto que la aplicación móvil espera recibir y deserializar
-        return new SolicitudPendienteResponse(
-            SolicitudId: s.Id,
-            RegistroId: s.RegistroId,
-            TipoRegistro: s.TipoRegistro,
-            PersonaId: s.PersonaId,
-            NombrePersona: s.Persona?.Nombre ?? "",
-            Empresa: s.Persona?.Empresa,
-            NumeroIdentificacion: s.Persona?.NumeroIdentificacion ?? "",
-            TipoID: s.Persona?.TipoIdentificacion?.Nombre ?? "",
-            Motivo: motivo,
-            Area: area,
-            FechaSolicitud: s.FechaSolicitud
-        );
-    }
-
     public async Task<VisitanteResponse> RegistrarVisitanteAsync(
         CrearVisitanteRequest req, string ip)
     {
@@ -306,6 +257,55 @@ public class AccesoService : IAccesoService
         }
 
         return respuestas.OrderBy(r => r.FechaSolicitud);
+    }
+
+    public async Task<SolicitudPendienteResponse?> ObtenerSolicitudPorIdAsync(int solicitudId)
+    {
+        // 1. Buscamos la solicitud específica en la base de datos
+        var s = await _db.SolicitudesPendientes
+            .Include(x => x.Persona).ThenInclude(p => p.TipoIdentificacion)
+            .FirstOrDefaultAsync(x => x.Id == solicitudId && x.Estado == "Pendiente");
+
+        // Si no existe o ya fue procesada (Aprobada/Rechazada), devolvemos null
+        if (s == null) return null;
+
+        string motivo = "";
+        string area = "";
+
+        // 2. Dependiendo del tipo de registro, buscamos el Área y el Motivo en sus respectivas tablas
+        if (s.TipoRegistro == "Visitante")
+        {
+            var reg = await _db.RegistrosVisitantes
+                .Include(r => r.Motivo)
+                .Include(r => r.Area)
+                .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
+
+            motivo = reg?.Motivo?.Nombre ?? "";
+            area = reg?.Area?.Nombre ?? "";
+        }
+        else if (s.TipoRegistro == "Proveedor")
+        {
+            var reg = await _db.RegistrosProveedores
+                .Include(r => r.Motivo)
+                .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
+
+            motivo = reg?.Motivo?.Nombre ?? "";
+        }
+
+        // 3. Retornamos el DTO exacto que la aplicación móvil espera recibir y deserializar
+        return new SolicitudPendienteResponse(
+            SolicitudId: s.Id,
+            RegistroId: s.RegistroId,
+            TipoRegistro: s.TipoRegistro,
+            PersonaId: s.PersonaId,
+            NombrePersona: s.Persona?.Nombre ?? "",
+            Empresa: s.Persona?.Empresa,
+            NumeroIdentificacion: s.Persona?.NumeroIdentificacion ?? "",
+            TipoID: s.Persona?.TipoIdentificacion?.Nombre ?? "",
+            Motivo: motivo,
+            Area: area,
+            FechaSolicitud: s.FechaSolicitud
+        );
     }
 
     public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync()
