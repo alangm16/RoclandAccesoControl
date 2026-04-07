@@ -15,6 +15,7 @@ public class SignalRService : IAsyncDisposable
     public event Action<NuevaSolicitudEvent>? NuevaSolicitudRecibida;
     public event Action<int, string>? SolicitudResuelta; // (solicitudId, estado)
     public event Action<HubConnectionState>? EstadoConexionCambiado;
+    public event Action<int>? SalidaRegistrada;
 
     public HubConnectionState Estado =>
         _connection?.State ?? HubConnectionState.Disconnected;
@@ -53,6 +54,12 @@ public class SignalRService : IAsyncDisposable
                 TimeSpan.FromSeconds(30)
             })
             .Build();
+
+        _connection.On<int>("SalidaRegistrada", registroId =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+                SalidaRegistrada?.Invoke(registroId));
+        });
 
         // ── NuevaSolicitud ─────────────────────────────────────────────
         _connection.On<NuevaSolicitudEvent>("NuevaSolicitud", solicitud =>
@@ -124,6 +131,8 @@ public class SignalRService : IAsyncDisposable
             MainThread.BeginInvokeOnMainThread(() =>
                 SolicitudResuelta?.Invoke(id, estado));
         });
+
+
 
         // ── Estado de conexión ─────────────────────────────────────────
         _connection.Reconnecting += error =>

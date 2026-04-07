@@ -10,16 +10,33 @@ public partial class AccesosActivosViewModel : BaseViewModel
 {
     private readonly ApiService _api;
     private readonly AuthStateService _auth;
+    private readonly SignalRService _signalR;
 
     [ObservableProperty] private ObservableCollection<AccesoActivo> _activos = [];
     [ObservableProperty] private int _totalDentro;
     [ObservableProperty] private bool _sinActivos = true;
 
-    public AccesosActivosViewModel(ApiService api, AuthStateService auth)
+    public AccesosActivosViewModel(ApiService api, AuthStateService auth, SignalRService signalR)
     {
         _api = api;
         _auth = auth;
+        _signalR = signalR;
         Titulo = "Dentro ahora";
+
+        _signalR.SalidaRegistrada += OnSalidaRegistrada;
+    }
+
+    private void OnSalidaRegistrada(int registroId)
+    {
+        MainThread.BeginInvokeOnMainThread(() => {
+            var item = Activos.FirstOrDefault(a => a.RegistroId == registroId);
+            if (item != null)
+            {
+                Activos.Remove(item);
+                TotalDentro = Activos.Count;
+                SinActivos = Activos.Count == 0;
+            }
+        });
     }
 
     [RelayCommand]

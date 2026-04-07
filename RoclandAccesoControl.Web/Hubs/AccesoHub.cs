@@ -20,6 +20,13 @@ public class AccesoHub : Hub
             .SendAsync("SolicitudConfirmada", solicitudId);
     }
 
+    public async Task NotificarSalida(int registroId)
+    {
+        // Enviamos el ID a todos los miembros del grupo "Guardias"
+        // El cliente móvil debe estar escuchando el evento "SalidaRegistrada"
+        await Clients.Group("Guardias").SendAsync("SalidaRegistrada", registroId);
+    }
+
     public override async Task OnConnectedAsync()
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, "Guardias");
@@ -31,4 +38,6 @@ public class AccesoHub : Hub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, "Guardias");
         await base.OnDisconnectedAsync(exception);
     }
+
+
 }

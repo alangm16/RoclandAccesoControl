@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using RoclandAccesoControl.Web.Hubs; 
 using RoclandAccesoControl.Web.Models.DTOs;
 using RoclandAccesoControl.Web.Services.Interfaces;
 
@@ -11,7 +13,12 @@ namespace RoclandAccesoControl.Web.Controllers;
 public class GuardiasController : ControllerBase
 {
     private readonly IAccesoService _acceso;
-    public GuardiasController(IAccesoService acceso) => _acceso = acceso;
+    private readonly IHubContext<AccesoHub> _hubContext;
+    public GuardiasController(IAccesoService acceso, IHubContext<AccesoHub> hubContext)
+    {
+        _acceso = acceso;
+        _hubContext = hubContext;
+    }
 
     [HttpGet("solicitudes")]
     public async Task<IActionResult> ObtenerSolicitudes()
@@ -31,21 +38,39 @@ public class GuardiasController : ControllerBase
     public async Task<IActionResult> Aprobar(AprobarSolicitudRequest request)
     {
         var ok = await _acceso.AprobarSolicitudAsync(request);
-        return ok ? Ok() : BadRequest("No se pudo aprobar la solicitud.");
+        if (ok)
+        {
+            // Notificamos a todos que la solicitud ya fue resuelta (para que desaparezca de la lista)
+            await _hubContext.Clients.Group("Guardias").SendAsync("SolicitudResuelta", new { solicitudId = request.SolicitudId, estado = "Aprobada" });
+            return Ok();
+        }
+        return BadRequest("No se pudo aprobar la solicitud.");
     }
 
     [HttpPost("rechazar")]
     public async Task<IActionResult> Rechazar(RechazarSolicitudRequest request)
     {
         var ok = await _acceso.RechazarSolicitudAsync(request);
-        return ok ? Ok() : BadRequest("No se pudo rechazar la solicitud.");
+        if (ok)
+        {
+            // Notificamos la resolución
+            await _hubContext.Clients.Group("Guardias").SendAsync("SolicitudResuelta", new { solicitudId = request.SolicitudId, estado = "Rechazada" });
+            return Ok();
+        }
+        return BadRequest("No se pudo rechazar la solicitud.");
     }
 
     [HttpPost("salida")]
     public async Task<IActionResult> MarcarSalida(MarcarSalidaRequest request)
     {
         var ok = await _acceso.MarcarSalidaAsync(request);
-        return ok ? Ok() : BadRequest("No se pudo registrar la salida.");
+        if (ok)
+        {
+            // ¡ESTA ES LA CLAVE! Enviamos el evento para que la lista "Dentro ahora" se limpie sola
+            await _hubContext.Clients.Group("Guardias").SendAsync("SalidaRegistrada", request.RegistroId);
+            return Ok();
+        }
+        return BadRequest("No se pudo registrar la salida.");
     }
 
     [HttpPost("fcm-token")]
