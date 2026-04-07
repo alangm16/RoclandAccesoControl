@@ -35,16 +35,31 @@ public class MyFirebaseMessagingService : FirebaseMessagingService
     {
         base.OnMessageReceived(message);
 
-        // Se extraen del nodo Notification nativo en vez de Data
-        string titulo = message.GetNotification()?.Title ?? "Nueva solicitud";
+        // 1. Modificamos el título para que sea evidente que viene de FCM
+        string tituloOriginal = message.GetNotification()?.Title ?? "Nueva solicitud";
+        string titulo = "🔥 FCM ACTIVO: " + tituloOriginal;
         string cuerpo = message.GetNotification()?.Body ?? "";
 
-        // El resto de la data (ej. solicitudId) sí viene en message.Data
         int notifId = 0;
         if (message.Data.TryGetValue("solicitudId", out var idStr))
             int.TryParse(idStr, out notifId);
 
+        // 2. Mostramos la notificación local con el nuevo título
         MostrarNotificacionLocal(notifId, titulo, cuerpo);
+
+        // 3. PRUEBA DE VIDA: Lanzar una alerta modal en la pantalla de la app
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            var mainPage = Microsoft.Maui.Controls.Application.Current?.MainPage;
+            if (mainPage != null)
+            {
+                await mainPage.DisplayAlertAsync(
+                    "¡Firebase Funciona!",
+                    $"Mensaje recibido exitosamente desde los servidores de Google.\n\nTítulo: {tituloOriginal}\nCuerpo: {cuerpo}",
+                    "Excelente"
+                );
+            }
+        });
     }
 
     private static void MostrarNotificacionLocal(int id, string titulo, string cuerpo)

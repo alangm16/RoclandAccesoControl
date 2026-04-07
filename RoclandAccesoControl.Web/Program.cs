@@ -72,8 +72,11 @@ builder.Services.AddAuthentication(options =>
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
+
+                // Usamos Contains e ignoramos mayúsculas/minúsculas para garantizar que atrape el token
                 if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/accesohub"))
+                    path.Value != null &&
+                    path.Value.Contains("accesohub", StringComparison.OrdinalIgnoreCase))
                 {
                     context.Token = accessToken;
                 }

@@ -118,6 +118,8 @@ public class SignalRService : IAsyncDisposable
             return Task.CompletedTask;
         };
 
+        System.Diagnostics.Debug.WriteLine($"[SIGNALR TOKEN DEBUG]: '{_auth.Token}'");
+
         await _connection.StartAsync();
         EstadoConexionCambiado?.Invoke(HubConnectionState.Connected);
     }
