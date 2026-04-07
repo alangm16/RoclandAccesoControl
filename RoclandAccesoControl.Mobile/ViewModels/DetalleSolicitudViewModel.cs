@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using RoclandAccesoControl.Mobile.Models;
 using RoclandAccesoControl.Mobile.Services;
+using RoclandAccesoControl.Mobile.Views;
 
 namespace RoclandAccesoControl.Mobile.ViewModels;
 
@@ -34,14 +35,11 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
         Titulo = "Detalle de Solicitud";
     }
 
-    // Método que descarga la solicitud si entramos desde la notificación
     private async Task CargarSolicitudDesdeApiAsync(int id)
     {
         EstaCargando = true;
         try
         {
-            // Nota: Si aún no tienes un método "ObtenerSolicitudPorIdAsync" en tu ApiService, 
-            // deberás crearlo para que haga un GET al backend solicitando este ID en específico.
             Solicitud = await _api.ObtenerSolicitudPorIdAsync(id);
         }
         catch (Exception ex)
@@ -87,7 +85,7 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
             {
                 await Shell.Current.DisplayAlert("✓ Aprobado",
                     $"Acceso aprobado. Entrega el gafete #{NumeroGafete}.", "OK");
-                await Shell.Current.GoToAsync("..");
+                await NavegarAtrasOSolicitudesAsync();
             }
             else
             {
@@ -132,7 +130,7 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
             {
                 await Shell.Current.DisplayAlert("✗ Rechazado",
                     "El acceso fue rechazado.", "OK");
-                await Shell.Current.GoToAsync("..");
+                await NavegarAtrasOSolicitudesAsync();
             }
         }
         catch (Exception ex)
@@ -146,5 +144,39 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task RegresarAsync() => await Shell.Current.GoToAsync("..");
+    private async Task RegresarAsync() => await NavegarAtrasOSolicitudesAsync();
+
+    // ──── Navegación inteligente hacia atrás ──────────────────────────
+    private async Task NavegarAtrasOSolicitudesAsync()
+    {
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            try
+            {
+                // Pequeño retardo para asegurar que la UI termine cualquier animación
+                await Task.Delay(100);
+
+                var navigationStack = Shell.Current.Navigation.NavigationStack;
+                bool hayPaginaAnteriorValida = navigationStack.Count >= 2 &&
+                                                navigationStack[^2] is not DetalleSolicitudPage;
+
+                if (hayPaginaAnteriorValida)
+                {
+                    // Flujo normal: regresar a la página anterior (normalmente SolicitudesPage)
+                    await Shell.Current.GoToAsync("..");
+                }
+                else
+                {
+                    // Fallback: navegar directamente a la raíz de Solicitudes
+                    await Shell.Current.GoToAsync("//Solicitudes");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Si algo falla, último recurso: ir a la raíz de Solicitudes
+                System.Diagnostics.Debug.WriteLine($"[NAV Error] {ex.Message}");
+                await Shell.Current.GoToAsync("//Solicitudes");
+            }
+        });
+    }
 }
