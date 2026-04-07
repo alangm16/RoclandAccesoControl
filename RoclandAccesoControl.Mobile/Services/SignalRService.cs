@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using RoclandAccesoControl.Mobile.Models;
 using System.Text.Json;
+using Plugin.LocalNotification;
+using Plugin.LocalNotification.Core.Models;
+using Plugin.LocalNotification.Core.Models.AndroidOption;
 
 namespace RoclandAccesoControl.Mobile.Services;
 
@@ -54,6 +57,32 @@ public class SignalRService : IAsyncDisposable
         // ── NuevaSolicitud ─────────────────────────────────────────────
         _connection.On<NuevaSolicitudEvent>("NuevaSolicitud", solicitud =>
         {
+            // 1. Construir y lanzar la notificación local a través de SignalR
+            try
+            {
+                var notif = new NotificationRequest
+                {
+                    NotificationId = solicitud.SolicitudId,
+                    Title = $"Nueva Solicitud - {solicitud.TipoRegistro}",
+                    Description = $"{solicitud.NombrePersona} - {solicitud.Motivo}",
+                    ReturningData = solicitud.SolicitudId.ToString(), // <-- EL ID PARA EL DEEP LINKING
+                    BadgeNumber = 1,
+                    CategoryType = NotificationCategoryType.Status,
+                    Android =
+                    {
+                        ChannelId = "acceso_control",
+                        Priority = AndroidPriority.High,
+                        IsGroupSummary = false
+                    }
+                };
+                LocalNotificationCenter.Current.Show(notif);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SignalR Local Notif Error]: {ex.Message}");
+            }
+
+            // 2. Notificamos a la interfaz de usuario (por si el guardia ya está viendo la lista)
             MainThread.BeginInvokeOnMainThread(() =>
                 NuevaSolicitudRecibida?.Invoke(solicitud));
         });

@@ -1,4 +1,5 @@
 using RoclandAccesoControl.Web.Models.DTOs;
+using RoclandAccesoControl.Web.Models.Entities;
 
 namespace RoclandAccesoControl.Web.Services.Interfaces;
 
@@ -8,6 +9,7 @@ public interface IAccesoService
     Task<VisitanteResponse> RegistrarVisitanteAsync(CrearVisitanteRequest req, string ip);
     Task<ProveedorResponse> RegistrarProveedorAsync(CrearProveedorRequest req, string ip);
     Task<IEnumerable<SolicitudPendienteResponse>> ObtenerSolicitudesPendientesAsync();
+    Task<SolicitudPendienteResponse?> ObtenerSolicitudPorIdAsync(int solicitudId);
     Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync();
     Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request);
     Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request);

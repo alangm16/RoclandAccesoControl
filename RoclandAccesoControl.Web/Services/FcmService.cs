@@ -30,23 +30,24 @@ public class FcmService : IFcmService
             // Obtener access token OAuth2 con la service account key
             var accessToken = await ObtenerAccessTokenAsync();
 
+            var payloadData = data ?? new Dictionary<string, string>();
+            payloadData["title"] = titulo;
+            payloadData["body"] = cuerpo;
+
             var payload = new
             {
                 message = new
                 {
                     token = deviceToken,
-                    notification = new { title = titulo, body = cuerpo },
-                    data = data ?? new Dictionary<string, string>(),
+                    // 1. ELIMINAMOS EL NODO 'notification' POR COMPLETO
+
+                    // 2. Pasamos todo por el nodo 'data'
+                    data = payloadData,
+
                     android = new
                     {
-                        priority = "HIGH",
-                        notification = new
-                        {
-                            channel_id = "acceso_control",
-                            notification_priority = "PRIORITY_HIGH",
-                            default_vibrate_timings = true,
-                            click_action = "NUEVA_SOLICITUD"
-                        }
+                        priority = "HIGH"
+                        // También eliminamos el bloque de 'notification' dentro de android
                     }
                 }
             };
