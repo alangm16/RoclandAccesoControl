@@ -114,11 +114,16 @@ public partial class SolicitudesViewModel : BaseViewModel
             FechaSolicitud = evento.FechaSolicitud
         };
 
-        Solicitudes.Insert(0, solicitud);
-        CantidadPendientes = Solicitudes.Count;
-        SinSolicitudes = false;
-
+        // Lanzar la notificación local (esto puede ir fuera del hilo principal)
         EnviarNotificacionLocal(solicitud);
+
+        // OBLIGATORIO: Modificar la interfaz y la colección en el Hilo Principal
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Solicitudes.Insert(0, solicitud); // Se agrega arriba en tiempo real
+            CantidadPendientes = Solicitudes.Count;
+            SinSolicitudes = Solicitudes.Count == 0;
+        });
     }
 
     private void OnEstadoCambiado(HubConnectionState estado)

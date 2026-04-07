@@ -28,11 +28,13 @@ public partial class AccesosActivosViewModel : BaseViewModel
 
     private void OnSalidaRegistrada(int registroId)
     {
-        MainThread.BeginInvokeOnMainThread(() => {
-            var item = Activos.FirstOrDefault(a => a.RegistroId == registroId);
-            if (item != null)
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            // Buscar siempre por ID para asegurar la referencia correcta
+            var itemARemover = Activos.FirstOrDefault(a => a.RegistroId == registroId);
+            if (itemARemover != null)
             {
-                Activos.Remove(item);
+                Activos.Remove(itemARemover);
                 TotalDentro = Activos.Count;
                 SinActivos = Activos.Count == 0;
             }
@@ -52,7 +54,7 @@ public partial class AccesosActivosViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+            await Shell.Current.DisplayAlertAsync("Error", ex.Message, "OK");
         }
         finally
         {
@@ -65,7 +67,7 @@ public partial class AccesosActivosViewModel : BaseViewModel
     {
         if (activo is null) return;
 
-        var confirmacion = await Shell.Current.DisplayAlert(
+        var confirmacion = await Shell.Current.DisplayAlertAsync(
             "Confirmar salida",
             $"¿Registrar salida de {activo.NombrePersona}?\nGafete: #{activo.NumeroGafete}",
             "Sí, marcar salida", "Cancelar");
@@ -84,18 +86,26 @@ public partial class AccesosActivosViewModel : BaseViewModel
 
             if (ok)
             {
-                Activos.Remove(activo);
-                TotalDentro = Activos.Count;
-                SinActivos = Activos.Count == 0;
+                // Envolver la eliminación en el Hilo Principal y buscar por ID
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    var itemARemover = Activos.FirstOrDefault(x => x.RegistroId == activo.RegistroId);
+                    if (itemARemover != null)
+                    {
+                        Activos.Remove(itemARemover);
+                        TotalDentro = Activos.Count;
+                        SinActivos = Activos.Count == 0;
+                    }
+                });
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", "No se pudo registrar la salida.", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "No se pudo registrar la salida.", "OK");
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error de red", ex.Message, "OK");
+            await Shell.Current.DisplayAlertAsync("Error de red", ex.Message, "OK");
         }
         finally
         {
