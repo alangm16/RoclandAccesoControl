@@ -12,18 +12,15 @@ namespace RoclandAccesoControl.Mobile.Platforms.Android;
 /// cuando la app está en primer plano.
 /// </summary>
 
-[Service(Exported = true, Name = "com.rocland.accesocontrol.MyFirebaseMessagingService")]
+[Service(Exported = false, Name = "com.rocland.accesocontrol.MyFirebaseMessagingService")]
 [IntentFilter(new[] { "com.google.firebase.MESSAGING_EVENT" })]
 public class MyFirebaseMessagingService : FirebaseMessagingService
 {
-    // Clave donde guardamos el token para que FcmTokenService lo lea
     public const string PrefKey = "fcm_token";
 
     public override void OnNewToken(string token)
     {
         base.OnNewToken(token);
-
-        // Persistir localmente para que FcmTokenService lo envíe al servidor
         Preferences.Set(PrefKey, token);
         System.Diagnostics.Debug.WriteLine($"[FCM] Nuevo token: {token[..10]}...");
     }
@@ -32,35 +29,43 @@ public class MyFirebaseMessagingService : FirebaseMessagingService
     {
         base.OnMessageReceived(message);
 
-        // Extraemos título y cuerpo directamente de la Data enviada por el servidor
-        string tituloOriginal = "Nueva solicitud";
+        // 1. Verificamos si la aplicación está abierta (Primer plano)
+        var actividadActual = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+        if (actividadActual != null)
+        {
+            // La app está abierta. SignalR se está encargando de mostrar la notificación.
+            // Firebase se retira en silencio para no duplicar avisos.
+            System.Diagnostics.Debug.WriteLine("[FCM] App en primer plano. Ignorando Firebase.");
+            return;
+        }
+
+        // 2. Si llegamos aquí, la app está minimizada o cerrada. Extraemos la Data.
+        string titulo = "Nueva solicitud";
         if (message.Data.TryGetValue("title", out var titleStr))
-            tituloOriginal = titleStr;
+            titulo = titleStr;
 
         string cuerpo = "";
         if (message.Data.TryGetValue("body", out var bodyStr))
             cuerpo = bodyStr;
 
-        // Agregamos el identificador para nuestra prueba
-        string titulo = "🔥 FCM ACTIVO: " + tituloOriginal;
-
         int notifId = 0;
         if (message.Data.TryGetValue("solicitudId", out var idStr))
             int.TryParse(idStr, out notifId);
 
-        // Mostramos la notificación usando el plugin local
+        // 3. Mostramos la notificación local
         MostrarNotificacionLocal(notifId, titulo, cuerpo);
     }
 
     private static void MostrarNotificacionLocal(int id, string titulo, string cuerpo)
     {
-        MainThread.BeginInvokeOnMainThread(() =>
+        try
         {
             var notif = new NotificationRequest
             {
                 NotificationId = id == 0 ? new Random().Next(1000, 9999) : id,
                 Title = titulo,
                 Description = cuerpo,
+                ReturningData = id.ToString(), // ¡CLAVE! Aquí guardamos el ID para la navegación
                 BadgeNumber = 1,
                 CategoryType = NotificationCategoryType.Status,
                 Android =
@@ -71,6 +76,10 @@ public class MyFirebaseMessagingService : FirebaseMessagingService
                 }
             };
             LocalNotificationCenter.Current.Show(notif);
-        });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[FCM Error Local Notif]: {ex.Message}");
+        }
     }
 }

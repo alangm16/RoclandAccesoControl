@@ -6,6 +6,7 @@ using RoclandAccesoControl.Mobile.Services;
 namespace RoclandAccesoControl.Mobile.ViewModels;
 
 [QueryProperty(nameof(Solicitud), "Solicitud")]
+[QueryProperty(nameof(SolicitudIdParam), "id")]
 public partial class DetalleSolicitudViewModel : BaseViewModel
 {
     private readonly ApiService _api;
@@ -15,11 +16,42 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
     [ObservableProperty] private string _numeroGafete = string.Empty;
     [ObservableProperty] private bool _accionCompletada;
 
+    public string SolicitudIdParam
+    {
+        set
+        {
+            if (int.TryParse(value, out int id))
+            {
+                _ = CargarSolicitudDesdeApiAsync(id);
+            }
+        }
+    }
+
     public DetalleSolicitudViewModel(ApiService api, AuthStateService auth)
     {
         _api = api;
         _auth = auth;
         Titulo = "Detalle de Solicitud";
+    }
+
+    // Método que descarga la solicitud si entramos desde la notificación
+    private async Task CargarSolicitudDesdeApiAsync(int id)
+    {
+        EstaCargando = true;
+        try
+        {
+            // Nota: Si aún no tienes un método "ObtenerSolicitudPorIdAsync" en tu ApiService, 
+            // deberás crearlo para que haga un GET al backend solicitando este ID en específico.
+            Solicitud = await _api.ObtenerSolicitudPorIdAsync(id);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlertAsync("Error", "No se pudo cargar el detalle del visitante.", "OK");
+        }
+        finally
+        {
+            EstaCargando = false;
+        }
     }
 
     [RelayCommand]

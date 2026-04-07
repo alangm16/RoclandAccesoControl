@@ -103,4 +103,19 @@ public class ApiService
                 Encoding.UTF8, "application/json"));
         return resp.IsSuccessStatusCode;
     }
+
+    // ── Obtener Solicitud por ID (Para Deep Linking / Notificaciones) ──
+    public async Task<SolicitudPendiente?> ObtenerSolicitudPorIdAsync(int id)
+    {
+        SetAuthHeader();
+
+        // NOTA: Ajusta la ruta "/api/guardias/solicitud/{id}" si tu endpoint 
+        // en el backend (Controller) tiene un nombre diferente.
+        var resp = await _http.GetAsync($"/api/guardias/solicitudes/{id}");
+
+        if (!resp.IsSuccessStatusCode)
+            return null;
+
+        return await resp.Content.ReadFromJsonAsync<SolicitudPendiente>(JsonOpts);
+    }
 }

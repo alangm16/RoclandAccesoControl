@@ -1,4 +1,5 @@
 using RoclandAccesoControl.Web.Models.DTOs;
+using RoclandAccesoControl.Web.Models.Entities;
 
 namespace RoclandAccesoControl.Web.Services.Interfaces;
 
@@ -13,4 +14,5 @@ public interface IAccesoService
     Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request);
     Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request);
     Task<bool> GuardarFcmTokenAsync(int guardiaId, string fcmToken);
+    Task<SolicitudPendiente?> ObtenerSolicitudPorIdAsync(int solicitudId);
 }

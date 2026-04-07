@@ -54,4 +54,18 @@ public class GuardiasController : ControllerBase
         var ok = await _acceso.GuardarFcmTokenAsync(request.GuardiaId, request.FcmToken);
         return ok ? Ok() : BadRequest("No se pudo guardar el token.");
     }
+
+    [HttpGet("solicitudes/{id}")]
+    public async Task<IActionResult> ObtenerSolicitudPorId(int id)
+    {
+        // Llamamos al servicio para obtener el detalle de una solicitud específica
+        var result = await _acceso.ObtenerSolicitudPorIdAsync(id);
+
+        if (result == null)
+        {
+            return NotFound("La solicitud no existe, fue cancelada o ya fue procesada.");
+        }
+
+        return Ok(result);
+    }
 }
