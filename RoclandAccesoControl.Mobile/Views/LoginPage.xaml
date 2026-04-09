@@ -5,45 +5,66 @@
              xmlns:vm="clr-namespace:RoclandAccesoControl.Mobile.ViewModels"
              x:DataType="vm:LoginViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="#0F172A">
+             BackgroundColor="#F0F4F0">
 
     <ScrollView>
-        <VerticalStackLayout Padding="32,60,32,32" Spacing="0"
-                             VerticalOptions="Center">
+        <VerticalStackLayout Padding="0" Spacing="0" VerticalOptions="Fill">
 
-            <!-- Logo / Marca -->
-            <Frame BackgroundColor="#1E293B" CornerRadius="20"
-                   Padding="24" Margin="0,0,0,40"
-                   BorderColor="Transparent" HorizontalOptions="Center">
-                <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
-                    <Image Source="logo_rocland.png" HorizontalOptions="Center"/>
-                    <Label Text="ROCLAND" FontSize="22" FontAttributes="Bold"
+            <!-- Franja superior verde degradada -->
+            <Grid HeightRequest="280" VerticalOptions="Start">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#2D6A2D" Offset="0.0"/>
+                        <GradientStop Color="#4CAF50" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Grid.Background>
+
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center"
+                                     VerticalOptions="Center">
+                    <!-- Logo PNG -->
+                   <Border
+                        WidthRequest="72"
+                        HeightRequest="72"
+                        StrokeShape="RoundRectangle 8"
+                        HorizontalOptions="Center">
+
+                        <Image
+                            Source="logo_rocland.png"
+                            Aspect="AspectFill"/>
+                    </Border>
+                    <Label Text="ROCLAND"
+                           FontSize="26" FontAttributes="Bold"
                            TextColor="White" HorizontalOptions="Center"
-                           CharacterSpacing="4"/>
-                    <Label Text="Control de Acceso" FontSize="13"
-                           TextColor="#94A3B8" HorizontalOptions="Center"/>
+                           CharacterSpacing="5"/>
+                    <Label Text="Control de Acceso"
+                           FontSize="13" TextColor="#C8E6C9"
+                           HorizontalOptions="Center"/>
                 </VerticalStackLayout>
-            </Frame>
+            </Grid>
 
-            <!-- Tarjeta de login -->
-            <Frame BackgroundColor="#1E293B" CornerRadius="16"
-                   Padding="24" BorderColor="#334155">
+            <!-- Tarjeta blanca flotante -->
+            <Frame BackgroundColor="White" CornerRadius="24"
+                   Padding="28,32" Margin="20,-32,20,0"
+                   BorderColor="#E0E0E0"
+                   Shadow="{Shadow Brush='#22000000', Offset='0,4', Radius='16'}">
                 <VerticalStackLayout Spacing="20">
 
-                    <Label Text="Iniciar sesión" FontSize="20"
-                           FontAttributes="Bold" TextColor="White"/>
+                    <Label Text="Iniciar sesión"
+                           FontSize="20" FontAttributes="Bold"
+                           TextColor="#1B3A1B"/>
 
                     <!-- Usuario -->
                     <VerticalStackLayout Spacing="6">
-                        <Label Text="Usuario" FontSize="13" TextColor="#94A3B8"/>
-                        <Frame BackgroundColor="#0F172A" CornerRadius="10"
-                               Padding="0" BorderColor="#334155">
+                        <Label Text="Usuario" FontSize="12"
+                               TextColor="#5A7A5A" FontAttributes="Bold"/>
+                        <Frame BackgroundColor="#F4F8F4" CornerRadius="10"
+                               Padding="0" BorderColor="#C8DFC8">
                             <Entry Placeholder="Usuario de guardia"
-                                   PlaceholderColor="#475569"
-                                   TextColor="White"
+                                   PlaceholderColor="#A5BFA5"
+                                   TextColor="#1B3A1B"
                                    Text="{Binding Usuario}"
-                                   Margin="12,0"
-                                   HeightRequest="48"
+                                   Margin="14,0"
+                                   HeightRequest="50"
                                    Keyboard="Text"
                                    ReturnType="Next"/>
                         </Frame>
@@ -51,50 +72,57 @@
 
                     <!-- Contraseña -->
                     <VerticalStackLayout Spacing="6">
-                        <Label Text="Contraseña" FontSize="13" TextColor="#94A3B8"/>
-                        <Frame BackgroundColor="#0F172A" CornerRadius="10"
-                               Padding="0" BorderColor="#334155">
+                        <Label Text="Contraseña" FontSize="12"
+                               TextColor="#5A7A5A" FontAttributes="Bold"/>
+                        <Frame BackgroundColor="#F4F8F4" CornerRadius="10"
+                               Padding="0" BorderColor="#C8DFC8">
                             <Entry Placeholder="Contraseña"
-                                   PlaceholderColor="#475569"
-                                   TextColor="White"
+                                   PlaceholderColor="#A5BFA5"
+                                   TextColor="#1B3A1B"
                                    Text="{Binding Password}"
                                    IsPassword="True"
-                                   Margin="12,0"
-                                   HeightRequest="48"
+                                   Margin="14,0"
+                                   HeightRequest="50"
                                    ReturnType="Go"
                                    ReturnCommand="{Binding IniciarSesionCommand}"/>
                         </Frame>
                     </VerticalStackLayout>
 
                     <!-- Error -->
-                    <Frame BackgroundColor="#450A0A" CornerRadius="8"
-                           Padding="12" BorderColor="#B91C1C"
+                    <Frame BackgroundColor="#FFF0F0" CornerRadius="8"
+                           Padding="14" BorderColor="#F5A0A0"
                            IsVisible="{Binding HayError}">
-                        <Label Text="{Binding MensajeError}" TextColor="#FCA5A5"
-                               FontSize="13"/>
+                        <Label Text="{Binding MensajeError}"
+                               TextColor="#C62828" FontSize="13"/>
                     </Frame>
 
-                    <!-- Botón -->
+                    <!-- Botón Ingresar -->
                     <Button Text="Ingresar"
                             Command="{Binding IniciarSesionCommand}"
-                            BackgroundColor="#2563EB"
-                            TextColor="White"
-                            FontAttributes="Bold"
-                            CornerRadius="10"
-                            HeightRequest="52"
-                            FontSize="16"/>
+                            CornerRadius="12"
+                            HeightRequest="54"
+                            FontSize="16" FontAttributes="Bold"
+                            TextColor="White">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#2D6A2D" Offset="0.0"/>
+                                <GradientStop Color="#4CAF50" Offset="1.0"/>
+                            </LinearGradientBrush>
+                        </Button.Background>
+                    </Button>
 
                     <!-- Loading -->
                     <ActivityIndicator IsRunning="{Binding EstaCargando}"
                                        IsVisible="{Binding EstaCargando}"
-                                       Color="#2563EB"
+                                       Color="#4CAF50"
                                        HorizontalOptions="Center"/>
                 </VerticalStackLayout>
             </Frame>
 
             <Label Text="v1.0 · Rocland © 2025"
-                   FontSize="11" TextColor="#334155"
-                   HorizontalOptions="Center" Margin="0,24,0,0"/>
+                   FontSize="11" TextColor="#8A9E8A"
+                   HorizontalOptions="Center" Margin="0,24,0,32"/>
+
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

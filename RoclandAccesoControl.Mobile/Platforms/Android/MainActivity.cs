@@ -4,6 +4,7 @@ using Android.Content.PM;
 using Android.Gms.Tasks;
 using Android.OS;
 using Android.Util;
+using AndroidX.AppCompat.App;
 using Firebase;
 using Firebase.Messaging;
 using Plugin.LocalNotification; // <-- 2. Agregado para conectar el plugin
@@ -24,6 +25,7 @@ public class MainActivity : MauiAppCompatActivity
         base.OnCreate(savedInstanceState);
 
         var app = FirebaseApp.InitializeApp(this);
+        AppCompatDelegate.DefaultNightMode = AppCompatDelegate.ModeNightNo;
         if (app == null)
             Log.Error("FCM", "Firebase no se inicializó correctamente");
         else

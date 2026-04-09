@@ -28,6 +28,12 @@ public class SolicitudPendiente
     public string TipoColor => TipoRegistro == "Visitante" ? "#2563EB" : "#7C3AED";
     public string HoraFormateada => FechaSolicitud.ToLocalTime().ToString("HH:mm");
     public string AreaOEmpresa => TipoRegistro == "Visitante" ? (Area ?? "") : (Empresa ?? "");
+    public string TipoIconoSource => TipoRegistro switch
+    {
+        "Visitante" => "icon_visitor.png",
+        "Proveedor/Cliente" => "icon_truck.png",
+        _ => "icon_visitor.png"
+    };
 }
 
 public class AccesoActivo
