@@ -24,7 +24,7 @@ public class SolicitudPendiente
     public DateTime FechaSolicitud { get; set; }
 
     // Computed para la UI
-    public string TipoIcono => TipoRegistro == "Visitante" ? "👤" : "🚚";
+    public string TipoIcono => TipoRegistro == "Visitante" ? "icon_visitor.png" : "icon_truck.png";
     public string TipoColor => TipoRegistro == "Visitante" ? "#2563EB" : "#7C3AED";
     public string HoraFormateada => FechaSolicitud.ToLocalTime().ToString("HH:mm");
     public string AreaOEmpresa => TipoRegistro == "Visitante" ? (Area ?? "") : (Empresa ?? "");
@@ -40,7 +40,7 @@ public class AccesoActivo
     public DateTime FechaEntrada { get; set; }
     public string Area { get; set; } = string.Empty;
 
-    public string TipoIcono => TipoRegistro == "Visitante" ? "👤" : "🚚";
+    public string TipoIcono => TipoRegistro == "Visitante" ? "icon_visitor.png" : "icon_truck.png";
     public string HoraEntradaFormateada => FechaEntrada.ToLocalTime().ToString("HH:mm");
     public string TiempoTranscurrido
     {
