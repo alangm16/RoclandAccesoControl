@@ -16,7 +16,7 @@
                    Padding="24" Margin="0,0,0,40"
                    BorderColor="Transparent" HorizontalOptions="Center">
                 <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
-                    <Label Text="🛡" FontSize="52" HorizontalOptions="Center"/>
+                    <Image Source="logo_rocland.png" HorizontalOptions="Center"/>
                     <Label Text="ROCLAND" FontSize="22" FontAttributes="Bold"
                            TextColor="White" HorizontalOptions="Center"
                            CharacterSpacing="4"/>
