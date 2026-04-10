@@ -212,8 +212,8 @@
 
                         <!-- Indicador cuando no hay gafetes -->
                         <Label Text="No hay gafetes disponibles en este momento."
-                               FontSize="12" TextColor="#DC2626"
-                               IsVisible="{Binding GafetesDisponibles.Count, Converter={StaticResource ZeroToBoolConverter}}"/>
+                           FontSize="12" TextColor="#DC2626"
+                           IsVisible="{Binding NoHayGafetes}"/>
                     </VerticalStackLayout>
                 </Border>
 

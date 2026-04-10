@@ -13,6 +13,7 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
 {
     private readonly ApiService _api;
     private readonly AuthStateService _auth;
+    public bool NoHayGafetes => GafetesDisponibles.Count == 0;
 
     [ObservableProperty] private SolicitudPendiente? _solicitud;
     [ObservableProperty] private ObservableCollection<GafeteDisponible> _gafetesDisponibles = [];
@@ -50,6 +51,7 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
         {
             var lista = await _api.ObtenerGafetesDisponiblesAsync();
             GafetesDisponibles = new ObservableCollection<GafeteDisponible>(lista);
+            OnPropertyChanged(nameof(NoHayGafetes)); // <-- Añadir esto
         }
         catch (Exception ex)
         {
