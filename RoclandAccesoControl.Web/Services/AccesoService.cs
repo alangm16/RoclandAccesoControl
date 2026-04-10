@@ -311,6 +311,7 @@ public class AccesoService : IAccesoService
         var visitantes = await _db.RegistrosVisitantes
             .Include(r => r.Persona)
             .Include(r => r.Area)
+            .Include(r => r.Gafete)                     // <-- Incluir gafete
             .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
             .ToListAsync();
 
@@ -319,13 +320,14 @@ public class AccesoService : IAccesoService
             TipoRegistro: "Visitante",
             NombrePersona: v.Persona.Nombre,
             Empresa: v.Persona.Empresa,
-            NumeroGafete: v.NumeroGafete ?? "",
+            NumeroGafete: v.Gafete?.Codigo ?? "",       // <-- Código del gafete
             FechaEntrada: v.FechaEntrada,
             Area: v.Area.Nombre
         )));
 
         var proveedores = await _db.RegistrosProveedores
             .Include(r => r.Persona)
+            .Include(r => r.Gafete)                     // <-- Incluir gafete
             .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
             .ToListAsync();
 
@@ -334,7 +336,7 @@ public class AccesoService : IAccesoService
             TipoRegistro: "Proveedor",
             NombrePersona: p.Persona.Nombre,
             Empresa: p.Persona.Empresa,
-            NumeroGafete: p.NumeroGafete ?? "",
+            NumeroGafete: p.Gafete?.Codigo ?? "",
             FechaEntrada: p.FechaEntrada,
             Area: "N/A"
         )));
@@ -344,46 +346,69 @@ public class AccesoService : IAccesoService
 
     public async Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request)
     {
-        var solicitud = await _db.SolicitudesPendientes.FindAsync(request.SolicitudId);
-        if (solicitud == null || solicitud.Estado != "Pendiente") return false;
-
-        solicitud.Estado = "Aprobado";
-        solicitud.GuardiaId = request.GuardiaId;
-
-        if (solicitud.TipoRegistro == "Visitante")
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            var registro = await _db.RegistrosVisitantes.FindAsync(solicitud.RegistroId);
-            if (registro != null)
+            var solicitud = await _db.SolicitudesPendientes.FindAsync(request.SolicitudId);
+            if (solicitud == null || solicitud.Estado != "Pendiente")
+                return false;
+
+            // Validar que el gafete exista, esté libre y activo
+            var gafete = await _db.Gafetes.FirstOrDefaultAsync(g =>
+                g.Id == request.GafeteId && g.Activo && g.Estado == "Libre");
+
+            if (gafete == null)
+                throw new InvalidOperationException("El gafete seleccionado no está disponible.");
+
+            // Actualizar solicitud
+            solicitud.Estado = "Aprobado";
+            solicitud.GuardiaId = request.GuardiaId;
+
+            // Actualizar registro según tipo
+            if (solicitud.TipoRegistro == "Visitante")
             {
-                registro.EstadoAcceso = "Aprobado";
-                registro.GuardiaEntradaId = request.GuardiaId;
-                registro.NumeroGafete = request.NumeroGafete;
+                var registro = await _db.RegistrosVisitantes.FindAsync(solicitud.RegistroId);
+                if (registro != null)
+                {
+                    registro.EstadoAcceso = "Aprobado";
+                    registro.GuardiaEntradaId = request.GuardiaId;
+                    registro.GafeteId = request.GafeteId;        // <-- Asignar FK
+                }
             }
+            else if (solicitud.TipoRegistro == "Proveedor")
+            {
+                var registro = await _db.RegistrosProveedores.FindAsync(solicitud.RegistroId);
+                if (registro != null)
+                {
+                    registro.EstadoAcceso = "Aprobado";
+                    registro.GuardiaEntradaId = request.GuardiaId;
+                    registro.GafeteId = request.GafeteId;
+                }
+            }
+
+            // Cambiar estado del gafete a "En uso"
+            gafete.Estado = "En uso";
+            gafete.FechaModificacion = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            // Notificar por SignalR
+            var guardia = await _db.Guardias.FindAsync(request.GuardiaId);
+            await _hub.Clients.Group("Guardias").SendAsync("SolicitudResuelta", new SolicitudResueltaEvent(
+                SolicitudId: request.SolicitudId,
+                Estado: "Aprobado",
+                NombreGuardia: guardia?.Nombre ?? ""
+            ));
+
+            return true;
         }
-        else if (solicitud.TipoRegistro == "Proveedor")
+        catch (Exception ex)
         {
-            var registro = await _db.RegistrosProveedores.FindAsync(solicitud.RegistroId);
-            if (registro != null)
-            {
-                registro.EstadoAcceso = "Aprobado";
-                registro.GuardiaEntradaId = request.GuardiaId;
-                registro.NumeroGafete = request.NumeroGafete;
-            }
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error al aprobar solicitud {SolicitudId}", request.SolicitudId);
+            return false;
         }
-
-        await _db.SaveChangesAsync();
-
-        var guardia = await _db.Guardias.FindAsync(request.GuardiaId);
-
-        // ── FIX 2: el evento se llama "SolicitudResuelta" en ambos casos
-        //    y manda el DTO tipado para que la app móvil pueda deserializarlo.
-        await _hub.Clients.All.SendAsync("SolicitudResuelta", new SolicitudResueltaEvent(
-            SolicitudId: request.SolicitudId,
-            Estado: "Aprobado",
-            NombreGuardia: guardia?.Nombre ?? ""
-        ));
-
-        return true;
     }
 
     public async Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request)
@@ -528,5 +553,13 @@ public class AccesoService : IAccesoService
         _db.Personas.Add(persona);
         await _db.SaveChangesAsync();
         return persona;
+    }
+
+    public async Task<IEnumerable<GafeteDisponibleResponse>> ObtenerGafetesDisponiblesAsync()
+    {
+        return await _db.Gafetes
+            .Where(g => g.Activo && g.Estado == "Libre")
+            .Select(g => new GafeteDisponibleResponse(g.Id, g.Codigo))
+            .ToListAsync();
     }
 }

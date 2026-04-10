@@ -17,7 +17,7 @@ public class SolicitudPendiente
     public int PersonaId { get; set; }
     public string NombrePersona { get; set; } = string.Empty;
     public string? Empresa { get; set; }
-    public string NumeroIdentificacion { get; set; } = string.Empty;
+    public string? NumeroIdentificacion { get; set; }
     public string TipoID { get; set; } = string.Empty;
     public string Motivo { get; set; } = string.Empty;
     public string? Area { get; set; }
@@ -60,13 +60,14 @@ public class AccesoActivo
     }
 }
 
+// Modificar AprobarRequest para usar GafeteId en lugar de string
 public class AprobarRequest
 {
     public int SolicitudId { get; set; }
     public int GuardiaId { get; set; }
-    public string NumeroGafete { get; set; } = string.Empty;
+    public int GafeteId { get; set; }               // <-- Ahora ID del gafete
+    // Podemos mantener NumeroGafete para mostrarlo en UI, pero no es necesario enviarlo
 }
-
 public class RechazarRequest
 {
     public int SolicitudId { get; set; }
@@ -89,9 +90,17 @@ public class NuevaSolicitudEvent
     public string TipoRegistro { get; set; } = string.Empty;
     public string NombrePersona { get; set; } = string.Empty;
     public string? Empresa { get; set; }
-    public string NumeroIdentificacion { get; set; } = string.Empty;
+    public string? NumeroIdentificacion { get; set; }
     public string TipoID { get; set; } = string.Empty;
     public string Motivo { get; set; } = string.Empty;
     public string? Area { get; set; }
     public DateTime FechaSolicitud { get; set; }
+}
+
+// Modelo para gafete disponible (retornado por API)
+public class GafeteDisponible
+{
+    public int Id { get; set; }
+    public string Codigo { get; set; } = string.Empty;
+    // Puedes agregar Observaciones si la tabla lo tuviera
 }

@@ -8,7 +8,8 @@
         public int MotivoId { get; set; }
         public DateTime FechaEntrada { get; set; }
         public DateTime? FechaSalida { get; set; }
-        public string? NumeroGafete { get; set; }
+        public int? GafeteId { get; set; }          // <-- Nuevo
+        public Gafete? Gafete { get; set; }
         public int GuardiaEntradaId { get; set; }
         public int? GuardiaSalidaId { get; set; }
         public string EstadoAcceso { get; set; } = "Pendiente";

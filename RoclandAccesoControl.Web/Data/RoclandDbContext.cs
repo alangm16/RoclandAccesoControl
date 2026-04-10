@@ -12,6 +12,7 @@ public class RoclandDbContext : DbContext
     public DbSet<MotivoVisita> MotivosVisita => Set<MotivoVisita>();
     public DbSet<Persona> Personas => Set<Persona>();
     public DbSet<Guardia> Guardias => Set<Guardia>();
+    public DbSet<Gafete> Gafetes => Set<Gafete>();
     public DbSet<RegistroVisitante> RegistrosVisitantes => Set<RegistroVisitante>();
     public DbSet<RegistroProveedor> RegistrosProveedores => Set<RegistroProveedor>();
     public DbSet<SolicitudPendiente> SolicitudesPendientes => Set<SolicitudPendiente>();
@@ -86,5 +87,35 @@ public class RoclandDbContext : DbContext
             .WithMany(g => g.SalidasProvAutorizadas)
             .HasForeignKey(r => r.GuardiaSalidaId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Gafetes ─────────────────────────────────────────────────
+        modelBuilder.Entity<Gafete>()
+            .ToTable("TBL_ROCLAND_GUARD_GAFETES");
+
+        modelBuilder.Entity<Gafete>()
+            .HasIndex(g => g.Codigo)
+            .IsUnique();
+
+        modelBuilder.Entity<Gafete>()
+            .HasIndex(g => g.Estado)
+            .HasFilter("[Activo] = 1");
+
+        modelBuilder.Entity<Gafete>()
+            .Property(g => g.Estado)
+            .HasDefaultValue("Libre");
+
+        // Relación con RegistroVisitante (GafeteId es nullable)
+        modelBuilder.Entity<RegistroVisitante>()
+            .HasOne(r => r.Gafete)
+            .WithMany(g => g.RegistrosVisitantes)
+            .HasForeignKey(r => r.GafeteId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Relación con RegistroProveedor
+        modelBuilder.Entity<RegistroProveedor>()
+            .HasOne(r => r.Gafete)
+            .WithMany(g => g.RegistrosProveedores)
+            .HasForeignKey(r => r.GafeteId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

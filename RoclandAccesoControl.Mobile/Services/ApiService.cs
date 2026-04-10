@@ -78,6 +78,14 @@ public class ApiService
         return resp.IsSuccessStatusCode;
     }
 
+    public async Task<List<GafeteDisponible>> ObtenerGafetesDisponiblesAsync()
+    {
+        SetAuthHeader();
+        var resp = await _http.GetAsync("/api/guardias/gafetes/disponibles");
+        if (!resp.IsSuccessStatusCode) return [];
+        return await resp.Content.ReadFromJsonAsync<List<GafeteDisponible>>(JsonOpts) ?? [];
+    }
+
     // ── Marcar salida ──────────────────────────────────────────────────
     public async Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request)
     {

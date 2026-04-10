@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using RoclandAccesoControl.Mobile.Models;
 using RoclandAccesoControl.Mobile.Services;
 using RoclandAccesoControl.Mobile.Views;
+using System.Collections.ObjectModel;
 
 namespace RoclandAccesoControl.Mobile.ViewModels;
 
@@ -14,7 +15,8 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
     private readonly AuthStateService _auth;
 
     [ObservableProperty] private SolicitudPendiente? _solicitud;
-    [ObservableProperty] private string _numeroGafete = string.Empty;
+    [ObservableProperty] private ObservableCollection<GafeteDisponible> _gafetesDisponibles = [];
+    [ObservableProperty] private GafeteDisponible? _gafeteSeleccionado;
     [ObservableProperty] private bool _accionCompletada;
 
     public string SolicitudIdParam
@@ -33,6 +35,26 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
         _api = api;
         _auth = auth;
         Titulo = "Detalle de Solicitud";
+    }
+
+    // Cargar gafetes cuando se asigna la solicitud o al navegar con id
+    partial void OnSolicitudChanged(SolicitudPendiente? value)
+    {
+        if (value != null)
+            _ = CargarGafetesAsync();
+    }
+
+    private async Task CargarGafetesAsync()
+    {
+        try
+        {
+            var lista = await _api.ObtenerGafetesDisponiblesAsync();
+            GafetesDisponibles = new ObservableCollection<GafeteDisponible>(lista);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", "No se pudieron cargar los gafetes disponibles.", "OK");
+        }
     }
 
     private async Task CargarSolicitudDesdeApiAsync(int id)
@@ -56,17 +78,16 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
     private async Task AprobarAsync()
     {
         if (Solicitud is null) return;
-
-        if (string.IsNullOrWhiteSpace(NumeroGafete))
+        if (GafeteSeleccionado is null)
         {
-            await Shell.Current.DisplayAlert("Campo requerido",
-                "Ingresa el número de gafete para aprobar.", "OK");
+            await Shell.Current.DisplayAlert("Gafete requerido",
+                "Debes seleccionar un gafete disponible.", "OK");
             return;
         }
 
         var confirmacion = await Shell.Current.DisplayAlert(
             "Confirmar aprobación",
-            $"¿Aprobar acceso de {Solicitud.NombrePersona} con gafete #{NumeroGafete}?",
+            $"¿Aprobar acceso de {Solicitud.NombrePersona} con gafete {GafeteSeleccionado.Codigo}?",
             "Aprobar", "Cancelar");
 
         if (!confirmacion) return;
@@ -78,18 +99,20 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
             {
                 SolicitudId = Solicitud.SolicitudId,
                 GuardiaId = _auth.GuardiaId,
-                NumeroGafete = NumeroGafete
+                GafeteId = GafeteSeleccionado.Id
             });
 
             if (ok)
             {
                 await Shell.Current.DisplayAlert("✓ Aprobado",
-                    $"Acceso aprobado. Entrega el gafete #{NumeroGafete}.", "OK");
+                    $"Acceso aprobado. Entrega el gafete {GafeteSeleccionado.Codigo}.", "OK");
                 await NavegarAtrasOSolicitudesAsync();
             }
             else
             {
                 await Shell.Current.DisplayAlert("Error", "No se pudo aprobar la solicitud.", "OK");
+                // Si falló porque el gafete ya no está libre, recargar lista
+                await CargarGafetesAsync();
             }
         }
         catch (Exception ex)

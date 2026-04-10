@@ -1,9 +1,14 @@
 ﻿namespace RoclandAccesoControl.Web.Models.DTOs;
 
+public record GafeteDisponibleResponse(
+    int Id,
+    string Codigo
+);
+
 public record AprobarSolicitudRequest(
     int SolicitudId,
     int GuardiaId,
-    string NumeroGafete
+    int GafeteId
 );
 
 public record RechazarSolicitudRequest(
@@ -37,7 +42,7 @@ public record AccesoActivoResponse(
     string TipoRegistro,
     string NombrePersona,
     string? Empresa,
-    string NumeroGafete,
+    string NumeroGafete,        // se llenará con gafete.Codigo o ""
     DateTime FechaEntrada,
     string Area
 );

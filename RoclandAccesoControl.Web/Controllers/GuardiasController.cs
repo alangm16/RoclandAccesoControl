@@ -34,13 +34,20 @@ public class GuardiasController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("gafetes/disponibles")]
+    public async Task<IActionResult> ObtenerGafetesDisponibles()
+    {
+        var result = await _acceso.ObtenerGafetesDisponiblesAsync();
+        return Ok(result);
+    }
+
     [HttpPost("aprobar")]
     public async Task<IActionResult> Aprobar(AprobarSolicitudRequest request)
     {
         var ok = await _acceso.AprobarSolicitudAsync(request);
         if (ok)
         {
-            // Notificamos a todos que la solicitud ya fue resuelta (para que desaparezca de la lista)
+            // Notificamos a todos que la solicitud ya fue resuelta
             await _hubContext.Clients.Group("Guardias").SendAsync("SolicitudResuelta", new { solicitudId = request.SolicitudId, estado = "Aprobada" });
             return Ok();
         }

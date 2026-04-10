@@ -15,4 +15,5 @@ public interface IAccesoService
     Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request);
     Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request);
     Task<bool> GuardarFcmTokenAsync(int guardiaId, string fcmToken);
+    Task<IEnumerable<GafeteDisponibleResponse>> ObtenerGafetesDisponiblesAsync();
 }

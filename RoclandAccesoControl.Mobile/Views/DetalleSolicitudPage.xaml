@@ -181,36 +181,39 @@
                     </Border.Shadow>
 
                     <VerticalStackLayout Spacing="10">
-
                         <HorizontalStackLayout Spacing="8">
-                            <Image Source="icon_badge.png"
-                                   HeightRequest="16" WidthRequest="16"
+                            <Image Source="icon_badge.png" HeightRequest="16" WidthRequest="16"
                                    VerticalOptions="Center" Opacity="0.5"/>
-                            <Label Text="Número de gafete"
+                            <Label Text="Seleccionar gafete"
                                    FontSize="13" FontAttributes="Bold"
                                    TextColor="#374151" VerticalOptions="Center"/>
-                            <!-- Indicador requerido -->
-                            <Label Text="* Requerido para aprobar"
+                            <Label Text="* Requerido"
                                    FontSize="11" TextColor="#EF4444"
                                    VerticalOptions="Center"/>
                         </HorizontalStackLayout>
 
+                        <!-- Picker personalizado con estilo -->
                         <Border BackgroundColor="#F9FAFB"
                                 StrokeShape="RoundRectangle 10"
                                 Stroke="#D1D5DB"
                                 StrokeThickness="1.5"
                                 Padding="0">
-                            <Entry Placeholder="Ej: G-042"
-                                   PlaceholderColor="#9CA3AF"
-                                   TextColor="#111827"
-                                   Text="{Binding NumeroGafete}"
-                                   Keyboard="Text"
-                                   FontSize="16"
-                                   FontAttributes="Bold"
-                                   Margin="14,0"
-                                   HeightRequest="52"/>
+                            <Picker x:Name="GafetePicker"
+                                    ItemsSource="{Binding GafetesDisponibles}"
+                                    ItemDisplayBinding="{Binding Codigo}"
+                                    SelectedItem="{Binding GafeteSeleccionado}"
+                                    Title="Selecciona un gafete"
+                                    TextColor="#111827"
+                                    FontSize="16"
+                                    FontAttributes="Bold"
+                                    HeightRequest="52"
+                                    Margin="14,0"/>
                         </Border>
 
+                        <!-- Indicador cuando no hay gafetes -->
+                        <Label Text="No hay gafetes disponibles en este momento."
+                               FontSize="12" TextColor="#DC2626"
+                               IsVisible="{Binding GafetesDisponibles.Count, Converter={StaticResource ZeroToBoolConverter}}"/>
                     </VerticalStackLayout>
                 </Border>
 
