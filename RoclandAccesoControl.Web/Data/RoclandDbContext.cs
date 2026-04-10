@@ -34,9 +34,16 @@ public class RoclandDbContext : DbContext
         modelBuilder.Entity<Guardia>()
             .ToTable("TBL_ROCLAND_GUARD_GUARDIAS");
         modelBuilder.Entity<RegistroVisitante>()
-            .ToTable("TBL_ROCLAND_GUARD_REGISTROVISITANTES");
+            .ToTable(
+                "TBL_ROCLAND_GUARD_REGISTROVISITANTES",
+                tb => tb.UseSqlOutputClause(false)
+            );
+
         modelBuilder.Entity<RegistroProveedor>()
-            .ToTable("TBL_ROCLAND_GUARD_REGISTROPROVEEDORES");
+            .ToTable(
+                "TBL_ROCLAND_GUARD_REGISTROPROVEEDORES",
+                tb => tb.UseSqlOutputClause(false)
+            );
         modelBuilder.Entity<SolicitudPendiente>()
             .ToTable("TBL_ROCLAND_GUARD_SOLICITUDESPENDIENTES");
         modelBuilder.Entity<Administrador>()
