@@ -203,7 +203,7 @@ public class AdminService : IAdminService
                 r.Id, "Visitante", r.Persona.Nombre, null,
                 r.Persona.NumeroIdentificacion, r.Area.Nombre,
                 r.Motivo.Nombre, r.FechaEntrada, r.FechaSalida,
-                r.MinutosEstancia, r.EstadoAcceso, r.NumeroGafete,
+                r.MinutosEstancia, r.EstadoAcceso, r.GafeteId,
                 r.GuardiaEntrada.Nombre))
             .ToListAsync();
 
@@ -214,7 +214,7 @@ public class AdminService : IAdminService
                 r.Id, "Proveedor", r.Persona.Nombre, r.Persona.Empresa,
                 r.Persona.NumeroIdentificacion, null,
                 r.Motivo.Nombre, r.FechaEntrada, r.FechaSalida,
-                r.MinutosEstancia, r.EstadoAcceso, r.NumeroGafete,
+                r.MinutosEstancia, r.EstadoAcceso, r.GafeteId,
                 r.GuardiaEntrada.Nombre))
             .ToListAsync();
 
@@ -336,7 +336,7 @@ public class AdminService : IAdminService
             ws.Cell(row, 8).Value = item.FechaSalida?.ToLocalTime().ToString("HH:mm") ?? "—";
             ws.Cell(row, 9).Value = item.MinutosEstancia?.ToString() ?? "—";
             ws.Cell(row, 10).Value = item.EstadoAcceso;
-            ws.Cell(row, 11).Value = item.NumeroGafete ?? "—";
+            ws.Cell(row, 11).Value = item.GafeteId?.ToString() ?? "—";
             ws.Cell(row, 12).Value = item.Guardia;
 
             // Color por estado

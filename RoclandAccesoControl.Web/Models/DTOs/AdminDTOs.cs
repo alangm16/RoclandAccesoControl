@@ -32,7 +32,7 @@ public record HistorialAccesoDto(
     DateTime? FechaSalida,
     int? MinutosEstancia,
     string EstadoAcceso,
-    string? NumeroGafete,
+    int? GafeteId,
     string Guardia
 );
 
