@@ -98,7 +98,7 @@ public partial class SolicitudesViewModel : BaseViewModel
         }
     }
 
-    private void OnNuevaSolicitud(NuevaSolicitudEvent evento)
+    private async void OnNuevaSolicitud(NuevaSolicitudEvent evento)
     {
         var solicitud = new SolicitudPendiente
         {
@@ -118,11 +118,14 @@ public partial class SolicitudesViewModel : BaseViewModel
         EnviarNotificacionLocal(solicitud);
 
         // OBLIGATORIO: Modificar la interfaz y la colección en el Hilo Principal
-        MainThread.BeginInvokeOnMainThread(() =>
+        await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            Solicitudes.Insert(0, solicitud); // Se agrega arriba en tiempo real
+            Solicitudes.Insert(0, solicitud);
             CantidadPendientes = Solicitudes.Count;
             SinSolicitudes = Solicitudes.Count == 0;
+
+            // Forzar una notificación de cambio de propiedad para que el binding se actualice
+            OnPropertyChanged(nameof(Solicitudes));
         });
     }
 
