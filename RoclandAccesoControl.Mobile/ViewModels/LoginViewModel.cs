@@ -51,7 +51,7 @@ public partial class LoginViewModel : BaseViewModel
             await _fcmTokenService.RegistrarTokenAsync();
 
             // Navegar al shell principal
-            await Shell.Current.GoToAsync("//Solicitudes");
+            await Shell.Current.GoToAsync("//Bitacora");
         }
         catch (Exception ex)
         {

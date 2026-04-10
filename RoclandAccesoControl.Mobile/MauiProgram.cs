@@ -35,12 +35,14 @@ public static class MauiProgram
         builder.Services.AddTransient<SolicitudesViewModel>();
         builder.Services.AddTransient<DetalleSolicitudViewModel>();
         builder.Services.AddTransient<AccesosActivosViewModel>();
+        builder.Services.AddSingleton<BitacoraViewModel>();
 
         // ── Pages ──────────────────────────────────────────────────────
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<SolicitudesPage>();
         builder.Services.AddTransient<DetalleSolicitudPage>();
         builder.Services.AddTransient<AccesosActivosPage>();
+        builder.Services.AddSingleton<BitacoraPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

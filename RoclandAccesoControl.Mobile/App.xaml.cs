@@ -51,7 +51,7 @@ public partial class App : Application
         try
         {
             var sesionRestaurada = await _auth.RestaurarSesionAsync();
-            await Shell.Current.GoToAsync(sesionRestaurada ? "//Solicitudes" : "//Login");
+            await Shell.Current.GoToAsync(sesionRestaurada ? "//Bitacora" : "//Login");
         }
         catch (Exception ex)
         {

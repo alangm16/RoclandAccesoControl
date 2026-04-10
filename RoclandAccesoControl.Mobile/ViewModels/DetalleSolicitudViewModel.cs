@@ -168,14 +168,14 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
                 else
                 {
                     // Fallback: navegar directamente a la raíz de Solicitudes
-                    await Shell.Current.GoToAsync("//Solicitudes");
+                    await Shell.Current.GoToAsync("//Bitacora");
                 }
             }
             catch (Exception ex)
             {
                 // Si algo falla, último recurso: ir a la raíz de Solicitudes
                 System.Diagnostics.Debug.WriteLine($"[NAV Error] {ex.Message}");
-                await Shell.Current.GoToAsync("//Solicitudes");
+                await Shell.Current.GoToAsync("//Bitacora");
             }
         });
     }

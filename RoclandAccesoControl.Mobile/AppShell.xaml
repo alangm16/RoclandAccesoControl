@@ -7,40 +7,15 @@
        BackgroundColor="#FFFFFF"
        TitleColor="#1A1A1A">
 
-    <Shell.Resources>
-        <ResourceDictionary>
-            <!-- Tab Bar estilo light/green -->
-            <Style TargetType="TabBar">
-                <Setter Property="Shell.TabBarBackgroundColor" Value="#FFFFFF"/>
-                <Setter Property="Shell.TabBarForegroundColor" Value="#22C55E"/>
-                <Setter Property="Shell.TabBarUnselectedColor" Value="#9CA3AF"/>
-                <Setter Property="Shell.TabBarTitleColor" Value="#22C55E"/>
-            </Style>
-        </ResourceDictionary>
-    </Shell.Resources>
-
-    <!-- Login (fuera del TabBar, sin NavBar) -->
+    <!-- Login (fuera del main, sin NavBar) -->
     <ShellContent Route="Login"
                   ContentTemplate="{DataTemplate views:LoginPage}"
                   Shell.NavBarIsVisible="False"/>
 
-    <!-- TabBar principal: Pendientes | Dentro -->
-    <TabBar Route="Main"
-        Shell.TabBarBackgroundColor="#FFFFFF"
-        Shell.TabBarForegroundColor="#22C55E"
-        Shell.TabBarUnselectedColor="#9CA3AF"
-        Shell.TabBarTitleColor="#22C55E">
-
-    <ShellContent Title="Pendientes"
-                  Route="Solicitudes"
-                  Icon="icon_shield.png"
-                  ContentTemplate="{DataTemplate views:SolicitudesPage}" />
-
-    <ShellContent Title="Dentro"
-                  Route="AccesosActivos"
-                  Icon="icon_people.png"
-                  ContentTemplate="{DataTemplate views:AccesosActivosPage}" />
-
-</TabBar>
+    <!-- Pantalla principal con tab bar propio (sin TabBar nativo del Shell) -->
+    <ShellContent Route="Bitacora"
+                  ContentTemplate="{DataTemplate views:BitacoraPage}"
+                  Shell.NavBarIsVisible="True"
+                  Shell.NavBarHasShadow="False"/>
 
 </Shell>

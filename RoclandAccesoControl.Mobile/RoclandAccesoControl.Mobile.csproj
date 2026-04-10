@@ -93,6 +93,9 @@
 	  <MauiXaml Update="Views\AccesosActivosPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
+	  <MauiXaml Update="Views\BitacoraPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\DetalleSolicitudPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
