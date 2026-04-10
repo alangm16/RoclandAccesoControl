@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               x:Class="RoclandAccesoControl.Mobile.Views.Popups.ErrorToast"
+               BackgroundColor="#FFFFFF"
+               CanBeDismissedByTappingOutsideOfPopup="True"
+               HorizontalOptions="Center"
+               VerticalOptions="Start">
+
+    <Border BackgroundColor="#FFFFFF"
+            StrokeShape="RoundRectangle 14"
+            Stroke="#FECACA"
+            StrokeThickness="1"
+            Padding="18,16"
+            Margin="24,80,24,0"
+            MinimumWidthRequest="260">
+        <Border.Shadow>
+            <Shadow Brush="#000000" Offset="0,4" Radius="16" Opacity="0.1"/>
+        </Border.Shadow>
+
+        <HorizontalStackLayout Spacing="14">
+            <Border BackgroundColor="#FEF2F2"
+                    StrokeShape="RoundRectangle 8"
+                    Stroke="Transparent"
+                    Padding="10"
+                    VerticalOptions="Center">
+                <Label Text="!" FontSize="15" FontAttributes="Bold"
+                       TextColor="#DC2626" VerticalOptions="Center"/>
+            </Border>
+
+            <VerticalStackLayout Spacing="3" VerticalOptions="Center">
+                <Label x:Name="LblTitulo"
+                       FontSize="14" FontAttributes="Bold" TextColor="#111827"/>
+                <Label x:Name="LblMensaje"
+                       FontSize="13" TextColor="#6B7280"/>
+            </VerticalStackLayout>
+        </HorizontalStackLayout>
+    </Border>
+</toolkit:Popup>

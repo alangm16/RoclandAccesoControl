@@ -1,8 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Views;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoclandAccesoControl.Mobile.Models;
 using RoclandAccesoControl.Mobile.Services;
 using RoclandAccesoControl.Mobile.Views;
+using RoclandAccesoControl.Mobile.Views.Popups;
 using System.Collections.ObjectModel;
 
 namespace RoclandAccesoControl.Mobile.ViewModels;
@@ -55,8 +58,27 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", "No se pudieron cargar los gafetes disponibles.", "OK");
+            var toast = new ErrorToast("Sin gafetes", "No se pudieron cargar los gafetes disponibles.");
+            await Shell.Current.CurrentPage.ShowPopupAsync(toast);
         }
+    }
+
+    [RelayCommand]
+    private async Task AbrirSelectorGafeteAsync()
+    {
+        if (GafetesDisponibles.Count == 0)
+            return;
+
+        var popup = new GafeteSelectorPopup(GafetesDisponibles);
+
+        var popupResult =
+            await Shell.Current.CurrentPage
+                .ShowPopupAsync<GafeteDisponible?>(popup);
+
+        var seleccionado = popupResult.Result;
+
+        if (seleccionado is not null)
+            GafeteSeleccionado = seleccionado;
     }
 
     private async Task CargarSolicitudDesdeApiAsync(int id)
@@ -68,7 +90,8 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlertAsync("Error", "No se pudo cargar el detalle del visitante.", "OK");
+            var toast = new ErrorToast("Error al cargar", "No se pudo cargar el detalle del visitante.");
+            await Shell.Current.CurrentPage.ShowPopupAsync(toast);
         }
         finally
         {
@@ -82,15 +105,20 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
         if (Solicitud is null) return;
         if (GafeteSeleccionado is null)
         {
-            await Shell.Current.DisplayAlert("Gafete requerido",
-                "Debes seleccionar un gafete disponible.", "OK");
+            var toast = new ErrorToast("Gafete requerido", "Debes seleccionar un gafete disponible.");
+            await Shell.Current.CurrentPage.ShowPopupAsync(toast);
             return;
         }
 
-        var confirmacion = await Shell.Current.DisplayAlert(
-            "Confirmar aprobación",
-            $"¿Aprobar acceso de {Solicitud.NombrePersona} con gafete {GafeteSeleccionado.Codigo}?",
-            "Aprobar", "Cancelar");
+        var popup =
+            new ConfirmarAprobacionPopup(
+                Solicitud.NombrePersona,
+                GafeteSeleccionado.Codigo);
+
+        var popupResult =
+            await Shell.Current.CurrentPage.ShowPopupAsync<bool>(popup);
+
+        bool confirmacion = popupResult.Result;
 
         if (!confirmacion) return;
 
@@ -106,20 +134,21 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
 
             if (ok)
             {
-                await Shell.Current.DisplayAlert("✓ Aprobado",
-                    $"Acceso aprobado. Entrega el gafete {GafeteSeleccionado.Codigo}.", "OK");
+                var toast = new ExitoToast("Acceso aprobado", $"Entrega el gafete {GafeteSeleccionado.Codigo}.");
+                await Shell.Current.CurrentPage.ShowPopupAsync(toast);
                 await NavegarAtrasOSolicitudesAsync();
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", "No se pudo aprobar la solicitud.", "OK");
-                // Si falló porque el gafete ya no está libre, recargar lista
+                var toast = new ErrorToast("No se pudo aprobar", "Intenta de nuevo o recarga los gafetes.");
+                await Shell.Current.CurrentPage.ShowPopupAsync(toast);
                 await CargarGafetesAsync();
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error de red", ex.Message, "OK");
+            var toast = new ErrorToast("Error de red", ex.Message);
+            await Shell.Current.CurrentPage.ShowPopupAsync(toast);
         }
         finally
         {
@@ -132,14 +161,14 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
     {
         if (Solicitud is null) return;
 
-        var motivo = await Shell.Current.DisplayPromptAsync(
-            "Rechazar acceso",
-            $"¿Por qué se rechaza el acceso de {Solicitud.NombrePersona}?",
-            placeholder: "Motivo (opcional)",
-            accept: "Rechazar",
-            cancel: "Cancelar");
+        var popup = new RechazarAccesoPopup(Solicitud.NombrePersona);
 
-        if (motivo is null) return; // Canceló
+        var popupResult =
+            await Shell.Current.CurrentPage.ShowPopupAsync<string?>(popup);
+
+        string? motivo = popupResult.Result;
+
+        if (motivo is null) return;
 
         EstaCargando = true;
         try
@@ -153,14 +182,15 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
 
             if (ok)
             {
-                await Shell.Current.DisplayAlert("✗ Rechazado",
-                    "El acceso fue rechazado.", "OK");
+                var toast = new ExitoToast("Acceso rechazado", "El registro fue guardado correctamente.");
+                await Shell.Current.CurrentPage.ShowPopupAsync(toast);
                 await NavegarAtrasOSolicitudesAsync();
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error de red", ex.Message, "OK");
+            var toast = new ErrorToast("Error de red", ex.Message);
+            await Shell.Current.CurrentPage.ShowPopupAsync(toast);
         }
         finally
         {

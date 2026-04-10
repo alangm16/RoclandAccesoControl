@@ -1,8 +1,10 @@
-﻿using System.Collections.ObjectModel;
+﻿using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoclandAccesoControl.Mobile.Models;
 using RoclandAccesoControl.Mobile.Services;
+using RoclandAccesoControl.Mobile.Views.Popups;
+using System.Collections.ObjectModel;
 
 namespace RoclandAccesoControl.Mobile.ViewModels;
 
@@ -54,7 +56,8 @@ public partial class AccesosActivosViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlertAsync("Error", ex.Message, "OK");
+            var toast = new ErrorToast("Sin conexión", ex.Message);
+            await Shell.Current.CurrentPage.ShowPopupAsync(toast);
         }
         finally
         {
@@ -67,10 +70,12 @@ public partial class AccesosActivosViewModel : BaseViewModel
     {
         if (activo is null) return;
 
-        var confirmacion = await Shell.Current.DisplayAlertAsync(
-            "Confirmar salida",
-            $"¿Registrar salida de {activo.NombrePersona}?\nGafete: #{activo.NumeroGafete}",
-            "Sí, marcar salida", "Cancelar");
+        var popup = new ConfirmarSalidaPopup(activo);
+
+        var popupResult =
+            await Shell.Current.CurrentPage.ShowPopupAsync<bool>(popup);
+
+        bool confirmacion = popupResult.Result;
 
         if (!confirmacion) return;
 
@@ -100,12 +105,14 @@ public partial class AccesosActivosViewModel : BaseViewModel
             }
             else
             {
-                await Shell.Current.DisplayAlertAsync("Error", "No se pudo registrar la salida.", "OK");
+                var toast = new ErrorToast("Error al registrar", "No se pudo registrar la salida.");
+                await Shell.Current.CurrentPage.ShowPopupAsync(toast);
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlertAsync("Error de red", ex.Message, "OK");
+            var toast = new ErrorToast("Error de red", ex.Message);
+            await Shell.Current.CurrentPage.ShowPopupAsync(toast);
         }
         finally
         {
