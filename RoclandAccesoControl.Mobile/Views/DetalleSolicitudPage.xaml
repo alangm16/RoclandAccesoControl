@@ -8,6 +8,10 @@
              Shell.NavBarIsVisible="True"
              Shell.NavBarHasShadow="False">
 
+             <Shell.BackButtonBehavior>
+                    <BackButtonBehavior IsVisible="False"/>
+                </Shell.BackButtonBehavior>
+
     <!-- NavBar personalizada -->
     <Shell.TitleView>
         <Grid ColumnDefinitions="Auto,*,Auto" Padding="0,0,4,0" ColumnSpacing="10">
