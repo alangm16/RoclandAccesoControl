@@ -55,8 +55,7 @@ public partial class LoginViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            var errorMsg = $"Error de conexión: {ex.Message}\nInner: {ex.InnerException?.Message}\nStackTrace: {ex.StackTrace}";
-            System.Diagnostics.Debug.WriteLine(errorMsg);  // ← se verá en la salida de VS
+            var errorMsg = $"Error de conexión";
             MostrarError(errorMsg);
         }
         finally
