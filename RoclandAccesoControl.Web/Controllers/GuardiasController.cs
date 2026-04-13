@@ -9,7 +9,7 @@ namespace RoclandAccesoControl.Web.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Guardia")]
+[Authorize(AuthenticationSchemes = "Bearer,AdminCookie", Roles = "Guardia,Admin,Supervisor")]
 public class GuardiasController : ControllerBase
 {
     private readonly IAccesoService _acceso;

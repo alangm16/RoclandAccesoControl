@@ -12,114 +12,120 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-            :root {
-                --bg: #080C14;
-                --surface: #0F1724;
-                --border: #1E2D45;
-                --accent: #3B82F6;
-                --accent-dim: #1D4ED8;
-                --text: #E2E8F0;
-                --muted: #64748B;
-                --error: #EF4444;
-                --mono: 'IBM Plex Mono', monospace;
-                --sans: 'IBM Plex Sans', sans-serif;
-            }
-            body {
-                background: var(--bg);
-                font-family: var(--sans);
-                min-height: 100vh;
-                display: grid;
-                place-items: center;
-                background-image:
-                    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.12), transparent);
-            }
-            .login-card {
-                width: min(420px, 92vw);
-                border: 1px solid var(--border);
-                background: var(--surface);
-                padding: 40px;
-                position: relative;
-            }
-            .login-card::before {
-                content: '';
-                position: absolute;
-                top: 0; left: 0; right: 0;
-                height: 2px;
-                background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            }
-            .brand { margin-bottom: 32px; }
-            .brand-tag {
-                font-family: var(--mono);
-                font-size: 11px;
-                color: var(--accent);
-                letter-spacing: 3px;
-                text-transform: uppercase;
-                margin-bottom: 8px;
-            }
-            .brand-name {
-                font-size: 24px;
-                font-weight: 600;
-                color: var(--text);
-                letter-spacing: -0.5px;
-            }
-            .brand-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
-            label {
-                display: block;
-                font-family: var(--mono);
-                font-size: 11px;
-                color: var(--muted);
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                margin-bottom: 8px;
-            }
-            .field { margin-bottom: 20px; }
-            input[type=text], input[type=password] {
-                width: 100%;
-                background: var(--bg);
-                border: 1px solid var(--border);
-                color: var(--text);
-                font-family: var(--mono);
-                font-size: 14px;
-                padding: 12px 14px;
-                outline: none;
-                transition: border-color 0.2s;
-            }
-            input:focus { border-color: var(--accent); }
-            .error-box {
-                background: rgba(239,68,68,0.1);
-                border: 1px solid rgba(239,68,68,0.3);
-                color: #FCA5A5;
-                font-size: 13px;
-                padding: 10px 14px;
-                margin-bottom: 20px;
-                display: none;
-            }
-            .error-box.visible { display: block; }
-            button[type=submit] {
-                width: 100%;
-                background: var(--accent);
-                color: white;
-                border: none;
-                font-family: var(--mono);
-                font-size: 13px;
-                font-weight: 600;
-                letter-spacing: 2px;
-                text-transform: uppercase;
-                padding: 14px;
-                cursor: pointer;
-                transition: background 0.2s;
-                margin-top: 8px;
-            }
-            button[type=submit]:hover { background: var(--accent-dim); }
-            .footer-note {
-                font-family: var(--mono);
-                font-size: 10px;
-                color: var(--muted);
-                text-align: center;
-                margin-top: 28px;
-                letter-spacing: 1px;
-            }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #F1F5F1;
+            --surface: #FFFFFF;
+            --border: #E5E7EB;
+            --accent: #22C55E;
+            --accent-dim: #16A34A;
+            --text: #111827;
+            --muted: #6B7280;
+            --error: #DC2626;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+        }
+        body {
+            background: var(--bg);
+            font-family: var(--sans);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background-image: radial-gradient(circle at 50% 0%, rgba(34,197,94,0.08), transparent 70%);
+        }
+        .login-card {
+            width: min(420px, 92vw);
+            background: var(--surface);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid var(--border);
+            padding: 40px;
+        }
+        .brand { margin-bottom: 36px; text-align: center; }
+        .brand-tag {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--accent);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .brand-name {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+        .brand-sub { font-size: 14px; color: var(--muted); margin-top: 6px; }
+        label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .field { margin-bottom: 22px; }
+        input[type=text], input[type=password] {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 15px;
+            padding: 14px 16px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
+        }
+        .error-box {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            border-radius: 12px;
+            color: var(--error);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            display: none;
+        }
+        .error-box.visible { display: block; }
+        button[type=submit] {
+            width: 100%;
+            background: linear-gradient(135deg, #2D6A2D 0%, #4CAF50 100%);
+            color: white;
+            border: none;
+            font-family: var(--sans);
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 16px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+            box-shadow: 0 6px 14px rgba(34,197,94,0.25);
+        }
+        button[type=submit]:hover {
+            background: linear-gradient(135deg, #1F4F1F 0%, #3D9B3D 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(34,197,94,0.3);
+        }
+        .footer-note {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted);
+            text-align: center;
+            margin-top: 28px;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>

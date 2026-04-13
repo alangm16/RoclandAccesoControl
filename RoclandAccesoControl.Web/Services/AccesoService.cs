@@ -306,45 +306,40 @@ public class AccesoService : IAccesoService
 
     public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync()
     {
-        var respuestas = new List<AccesoActivoResponse>();
-        var ahoraServidor = DateTime.UtcNow;
-
         var visitantes = await _db.RegistrosVisitantes
             .Include(r => r.Persona)
             .Include(r => r.Area)
-            .Include(r => r.Gafete)                     // <-- Incluir gafete
+            .Include(r => r.Gafete)
             .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+            .Select(r => new AccesoActivoResponse(
+                r.Id,
+                "Visitante",
+                r.Persona.Nombre,
+                null,
+                r.Gafete != null ? r.Gafete.Codigo : "",
+                r.FechaEntrada,
+                r.Area.Nombre,
+                EF.Functions.DateDiffMinute(r.FechaEntrada, DateTime.UtcNow)
+            ))
             .ToListAsync();
-
-        respuestas.AddRange(visitantes.Select(v => new AccesoActivoResponse(
-            RegistroId: v.Id,
-            TipoRegistro: "Visitante",
-            NombrePersona: v.Persona.Nombre,
-            Empresa: v.Persona.Empresa,
-            NumeroGafete: v.Gafete?.Codigo ?? "",       // <-- Código del gafete
-            FechaEntrada: v.FechaEntrada,
-            Area: v.Area.Nombre,
-            MinutosLlevaDentro: (ahoraServidor - v.FechaEntrada).TotalMinutes
-        )));
 
         var proveedores = await _db.RegistrosProveedores
             .Include(r => r.Persona)
-            .Include(r => r.Gafete)                     // <-- Incluir gafete
+            .Include(r => r.Gafete)
             .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+            .Select(r => new AccesoActivoResponse(
+                r.Id,
+                "Proveedor",
+                r.Persona.Nombre,
+                r.Persona.Empresa,
+                r.Gafete != null ? r.Gafete.Codigo : "",
+                r.FechaEntrada,
+                r.Persona.Empresa ?? "Proveedor",
+                EF.Functions.DateDiffMinute(r.FechaEntrada, DateTime.UtcNow)
+            ))
             .ToListAsync();
 
-        respuestas.AddRange(proveedores.Select(p => new AccesoActivoResponse(
-            RegistroId: p.Id,
-            TipoRegistro: "Proveedor",
-            NombrePersona: p.Persona.Nombre,
-            Empresa: p.Persona.Empresa,
-            NumeroGafete: p.Gafete?.Codigo ?? "",
-            FechaEntrada: p.FechaEntrada,
-            Area: "N/A",
-            MinutosLlevaDentro: (ahoraServidor - p.FechaEntrada).TotalMinutes
-        )));
-
-        return respuestas.OrderByDescending(r => r.FechaEntrada);
+        return visitantes.Concat(proveedores).OrderByDescending(a => a.FechaEntrada);
     }
 
     public async Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request)

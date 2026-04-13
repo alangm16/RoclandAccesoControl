@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Serilog;
 using Serilog.Events;
+using QuestPDF.Infrastructure;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -184,6 +185,9 @@ builder.Services.AddRateLimiter(options =>
     });
     options.RejectionStatusCode = 429; // Too Many Requests
 });
+
+// -- Quest ----------------------------------
+QuestPDF.Settings.License = LicenseType.Community;
 
 var app = builder.Build();
 
