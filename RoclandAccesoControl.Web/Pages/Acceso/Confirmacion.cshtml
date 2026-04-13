@@ -70,7 +70,7 @@
             const d = JSON.parse(data);
             document.getElementById('detNombre').textContent = d.nombre  || '—';
             document.getElementById('detTipo').textContent   = d.tipo    || '—';
-            document.getElementById('detFolio').textContent  = '#' + (d.id || '—');
+            // document.getElementById('detFolio').textContent  = '#' + (d.id || '—');
             document.getElementById('detHora').textContent   = d.hora    || '—';
             sessionStorage.removeItem('rocland_confirm');
         } catch { /* no-op */ }
