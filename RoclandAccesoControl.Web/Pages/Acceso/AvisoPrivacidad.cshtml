@@ -1,0 +1,83 @@
+﻿@page "/Acceso/AvisoPrivacidad"
+@model RoclandAccesoControl.Web.Pages.Acceso.AvisoPrivacidadModel
+@{
+    ViewData["Title"] = "Aviso de Privacidad";
+    Layout = "~/Pages/Shared/_AccesoLayout.cshtml";
+}
+
+<div class="selector-page fade-in">
+    <a href="/Acceso" class="form-page-back">
+        <i class="bi bi-arrow-left"></i> Volver al inicio
+    </a>
+
+    <div class="form-page-header">
+        <div class="form-page-tag">
+            <i class="bi bi-shield-lock-fill"></i> Seguridad Rocland
+        </div>
+        <h1 class="form-page-title">Aviso de Privacidad</h1>
+        <p class="selector-subtitle">
+            Tu privacidad es nuestra prioridad. Conoce cómo protegemos tus datos personales.
+        </p>
+    </div>
+
+    <div class="form-section-card">
+        <div class="form-section-title">
+            <i class="bi bi-building"></i> Responsable del tratamiento
+        </div>
+        <p class="consent-text">
+            <strong>ROCLAND</strong> (en adelante “la empresa”), con domicilio en sus instalaciones corporativas, es responsable del uso y protección de sus datos personales, en cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.
+        </p>
+    </div>
+
+    <div class="form-section-card">
+        <div class="form-section-title">
+            <i class="bi bi-clipboard-data"></i> Datos personales recabados
+        </div>
+        <p class="consent-text">Los datos que podrán ser solicitados en el área de caseta incluyen:</p>
+        <ul class="consent-text">
+            <li>Nombre completo</li>
+            <li>Empresa a la que pertenece</li>
+            <li>Motivo de la visita y persona a visitar</li>
+            <li>Hora de entrada y salida</li>
+            <li>Identificación oficial (tipo y número)</li>
+            <li>Placas del vehículo y firma</li>
+            <li>Imagen o videograbación mediante cámaras de seguridad</li>
+        </ul>
+    </div>
+
+    <div class="form-section-card">
+        <div class="form-section-title">
+            <i class="bi bi-check2-circle"></i> Finalidades del tratamiento
+        </div>
+        <p class="consent-text">Sus datos serán utilizados para:</p>
+        <ul class="consent-text">
+            <li>Control de acceso a las instalaciones</li>
+            <li>Registro de entradas y salidas</li>
+            <li>Seguridad interna y monitoreo mediante videovigilancia</li>
+            <li>Protección de bienes y personas dentro de las instalaciones</li>
+        </ul>
+    </div>
+
+    <div class="form-section-card">
+        <div class="form-section-title">
+            <i class="bi bi-shield-check"></i> Tus derechos y seguridad
+        </div>
+        <p class="consent-text">
+            <strong>Transferencia:</strong> Sus datos no serán compartidos con terceros, salvo por obligaciones legales.
+        </p>
+        <p class="consent-text">
+            <strong>Derechos ARCO:</strong> Usted tiene derecho a acceder, rectificar, cancelar u oponerse al tratamiento de sus datos mediante solicitud escrita al área responsable.
+        </p>
+        <p class="consent-text">
+            <strong>Medidas:</strong> Implementamos seguridad administrativa, técnica y física para evitar el uso no autorizado de su información.
+        </p>
+    </div>
+
+    <div class="selector-note">
+        <p class="mb-2">
+            <i class="bi bi-info-circle me-1"></i>
+            Al proporcionar tus datos en caseta, aceptas el tratamiento conforme a este aviso.
+        </p>
+        <small class="text-muted">Última actualización: Enero 2026</small>
+    </div>
+</div>
