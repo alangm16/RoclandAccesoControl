@@ -46,16 +46,30 @@ public class AccesoActivo
     public DateTime FechaEntrada { get; set; }
     public string Area { get; set; } = string.Empty;
 
+    public double MinutosLlevaDentro { get; set; } 
+
+    // 2. Guardamos la hora en que el celular creó/descargó este objeto en memoria
+    private readonly DateTime _horaCreacionLocal = DateTime.UtcNow;
+
     public string TipoIcono => TipoRegistro == "Visitante" ? "icon_visitor.png" : "icon_truck.png";
     public string HoraEntradaFormateada => FechaEntrada.ToLocalTime().ToString("HH:mm");
+    
+    // 3. El cálculo blindado
     public string TiempoTranscurrido
     {
         get
         {
-            var diff = DateTime.UtcNow - FechaEntrada.ToUniversalTime();
-            if (diff.TotalHours >= 1)
-                return $"{(int)diff.TotalHours}h {diff.Minutes}m";
-            return $"{diff.Minutes}m";
+            var tiempoEnPantalla = DateTime.UtcNow - _horaCreacionLocal;
+            var minutosTotales = MinutosLlevaDentro + tiempoEnPantalla.TotalMinutes;
+
+            if (minutosTotales < 0) minutosTotales = 0;
+
+            int horas = (int)(minutosTotales / 60);
+            int minutos = (int)(minutosTotales % 60);
+
+            if (horas >= 1)
+                return $"{horas}h {minutos}m";
+            return $"{minutos}m";
         }
     }
 }
