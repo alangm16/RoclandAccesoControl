@@ -35,10 +35,6 @@
             <span class="confirm-detail-value" id="detTipo">—</span>
         </div>
         <div class="confirm-detail-row">
-            <span class="confirm-detail-label">Folio</span>
-            <span class="confirm-detail-value" id="detFolio">—</span>
-        </div>
-        <div class="confirm-detail-row">
             <span class="confirm-detail-label">Estado</span>
             <span class="confirm-detail-value">
                 <span class="status-badge status-pendiente">
@@ -74,7 +70,6 @@
             const d = JSON.parse(data);
             document.getElementById('detNombre').textContent = d.nombre  || '—';
             document.getElementById('detTipo').textContent   = d.tipo    || '—';
-            document.getElementById('detFolio').textContent  = '#' + (d.id || '—');
             document.getElementById('detHora').textContent   = d.hora    || '—';
             sessionStorage.removeItem('rocland_confirm');
         } catch { /* no-op */ }
