@@ -67,13 +67,13 @@ public class AccesoService : IAccesoService
             PersonaId = persona.Id,
             AreaId = req.AreaId,
             MotivoId = req.MotivoId,
-            FechaEntrada = DateTime.Now,
+            FechaEntrada = DateTime.UtcNow,
             GuardiaEntradaId = 1,
             EstadoAcceso = "Pendiente",
             ConsentimientoFirmado = req.ConsentimientoFirmado,
             Observaciones = req.Observaciones,
             IPSolicitud = ip,
-            FechaCreacion = DateTime.Now,
+            FechaCreacion = DateTime.UtcNow,
         };
 
         _db.RegistrosVisitantes.Add(registro);
@@ -83,7 +83,7 @@ public class AccesoService : IAccesoService
             TipoRegistro = "Visitante",
             RegistroId = 0,
             PersonaId = persona.Id,
-            FechaSolicitud = DateTime.Now,
+            FechaSolicitud = DateTime.UtcNow,
             Estado = "Pendiente",
         };
         _db.SolicitudesPendientes.Add(solicitud);
@@ -145,7 +145,7 @@ public class AccesoService : IAccesoService
         {
             PersonaId = persona.Id,
             MotivoId = req.MotivoId,
-            FechaEntrada = DateTime.Now,
+            FechaEntrada = DateTime.UtcNow,
             UnidadPlacas = req.UnidadPlacas,
             FacturaRemision = req.FacturaRemision,
             GuardiaEntradaId = 1,
@@ -153,7 +153,7 @@ public class AccesoService : IAccesoService
             ConsentimientoFirmado = req.ConsentimientoFirmado,
             Observaciones = req.Observaciones,
             IPSolicitud = ip,
-            FechaCreacion = DateTime.Now,
+            FechaCreacion = DateTime.UtcNow,
         };
 
         _db.RegistrosProveedores.Add(registro);
@@ -163,7 +163,7 @@ public class AccesoService : IAccesoService
             TipoRegistro = "Proveedor",
             RegistroId = 0,
             PersonaId = persona.Id,
-            FechaSolicitud = DateTime.Now,
+            FechaSolicitud = DateTime.UtcNow,
             Estado = "Pendiente",
         };
         _db.SolicitudesPendientes.Add(solicitud);
@@ -307,6 +307,7 @@ public class AccesoService : IAccesoService
     public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync()
     {
         var respuestas = new List<AccesoActivoResponse>();
+        var ahoraServidor = DateTime.Now;
 
         var visitantes = await _db.RegistrosVisitantes
             .Include(r => r.Persona)
@@ -322,7 +323,8 @@ public class AccesoService : IAccesoService
             Empresa: v.Persona.Empresa,
             NumeroGafete: v.Gafete?.Codigo ?? "",       // <-- Código del gafete
             FechaEntrada: v.FechaEntrada,
-            Area: v.Area.Nombre
+            Area: v.Area.Nombre,
+            MinutosLlevaDentro: (ahoraServidor - v.FechaEntrada).TotalMinutes
         )));
 
         var proveedores = await _db.RegistrosProveedores
@@ -338,7 +340,8 @@ public class AccesoService : IAccesoService
             Empresa: p.Persona.Empresa,
             NumeroGafete: p.Gafete?.Codigo ?? "",
             FechaEntrada: p.FechaEntrada,
-            Area: "N/A"
+            Area: "N/A",
+            MinutosLlevaDentro: (ahoraServidor - p.FechaEntrada).TotalMinutes
         )));
 
         return respuestas.OrderByDescending(r => r.FechaEntrada);
@@ -465,7 +468,7 @@ public class AccesoService : IAccesoService
             var registro = await _db.RegistrosVisitantes.FindAsync(request.RegistroId);
             if (registro == null || registro.FechaSalida != null) return false;
 
-            registro.FechaSalida = DateTime.Now;
+            registro.FechaSalida = DateTime.UtcNow;
             registro.GuardiaSalidaId = request.GuardiaId;
         }
         else if (request.TipoRegistro == "Proveedor")
@@ -473,7 +476,7 @@ public class AccesoService : IAccesoService
             var registro = await _db.RegistrosProveedores.FindAsync(request.RegistroId);
             if (registro == null || registro.FechaSalida != null) return false;
 
-            registro.FechaSalida = DateTime.Now;
+            registro.FechaSalida = DateTime.UtcNow;
             registro.GuardiaSalidaId = request.GuardiaId;
         }
         else
@@ -499,7 +502,7 @@ public class AccesoService : IAccesoService
         var persona = await _db.Personas.FindAsync(personaId);
         if (persona is null) return;
         persona.TotalVisitas++;
-        persona.FechaUltimaVisita = DateTime.Now;
+        persona.FechaUltimaVisita = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
 
@@ -548,7 +551,7 @@ public class AccesoService : IAccesoService
             Telefono = telefono,
             Email = email,
             Activo = true,
-            FechaRegistro = DateTime.Now,
+            FechaRegistro = DateTime.UtcNow,
         };
         _db.Personas.Add(persona);
         await _db.SaveChangesAsync();

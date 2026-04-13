@@ -52,7 +52,7 @@ public class AccesoActivo
     {
         get
         {
-            var diff = DateTime.UtcNow - FechaEntrada;
+            var diff = DateTime.UtcNow - FechaEntrada.ToUniversalTime();
             if (diff.TotalHours >= 1)
                 return $"{(int)diff.TotalHours}h {diff.Minutes}m";
             return $"{diff.Minutes}m";

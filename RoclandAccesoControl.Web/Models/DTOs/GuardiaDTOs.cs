@@ -44,7 +44,8 @@ public record AccesoActivoResponse(
     string? Empresa,
     string NumeroGafete,        // se llenará con gafete.Codigo o ""
     DateTime FechaEntrada,
-    string Area
+    string Area,
+    double MinutosLlevaDentro
 );
 
 public record RegistrarFcmTokenRequest(
