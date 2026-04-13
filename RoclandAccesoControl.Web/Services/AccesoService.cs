@@ -307,7 +307,7 @@ public class AccesoService : IAccesoService
     public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync()
     {
         var respuestas = new List<AccesoActivoResponse>();
-        var ahoraServidor = DateTime.Now;
+        var ahoraServidor = DateTime.UtcNow;
 
         var visitantes = await _db.RegistrosVisitantes
             .Include(r => r.Persona)
