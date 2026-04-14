@@ -107,7 +107,7 @@
             });
             if (!res.ok) { alert('Error al guardar. Intenta de nuevo.'); return; }
             cancelar(tipo);
-            location.reload(); // forzar push
+            location.reload();
         }
 
         /* ── Activar / desactivar ────────────────────────────────────── */
@@ -118,7 +118,7 @@
         }
 
         /* ── Inicializar con los datos del PageModel ─────────────────── */
-        renderCatalogo('area',   @Html.Raw(JsonSerializer.Serialize(Model.Areas,   jsonOpts)));
+        renderCatalogo('area',   @Html.Raw(JsonSerializer.Serialize(Model.Areas, jsonOpts)));
         renderCatalogo('motivo', @Html.Raw(JsonSerializer.Serialize(Model.Motivos, jsonOpts)));
         renderCatalogo('tipoid', @Html.Raw(JsonSerializer.Serialize(Model.TiposId, jsonOpts)));
     </script>

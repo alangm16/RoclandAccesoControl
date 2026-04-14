@@ -1,5 +1,5 @@
-﻿﻿@{
-var usuario = User.Identity?.Name ?? "Admin";
+﻿@{
+    var usuario = User.Identity?.Name ?? "Admin";
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -13,58 +13,56 @@ var usuario = User.Identity?.Name ?? "Admin";
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
 </head>
 <body>
-    <!-- Overlay para móvil -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
     <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
+    <nav class="sidebar">
         <div class="sidebar-brand">
             <span class="brand-tag">ROCLAND</span>
             <span class="brand-sub">AccesoControl</span>
         </div>
         <ul class="nav-links">
             <li>
-                <a href="/Admin/Dashboard" class="nav-link @(ViewData["Page"]?.ToString() == "dashboard" ? "active" : "")" title="Dashboard">
-                    <img src="~/images/icon_data.png" class="nav-icon" alt="Dashboard" /> <span>Dashboard</span>
+                <a href="/Admin/Dashboard" class="nav-link @(ViewData["Page"]?.ToString() == "dashboard" ? "active" : "")">
+                    <img src="~/images/icon_data.png" class="nav-icon" alt="Dashboard" /> Dashboard
                 </a>
             </li>
             <li>
-                <a href="/Admin/Historial" class="nav-link @(ViewData["Page"]?.ToString() == "historial" ? "active" : "")" title="Historial">
-                    <img src="~/images/icon_content.png" class="nav-icon" alt="Historial" /> <span>Historial</span>
+                <a href="/Admin/Historial" class="nav-link @(ViewData["Page"]?.ToString() == "historial" ? "active" : "")">
+                    <img src="~/images/icon_content.png" class="nav-icon" alt="Historial" /> Historial
                 </a>
             </li>
             <li>
-                <a href="/Admin/Personas" class="nav-link @(ViewData["Page"]?.ToString() == "personas" ? "active" : "")" title="Personas">
-                    <img src="~/images/icon_people.png" class="nav-icon" alt="Personas" /> <span>Personas</span>
+                <a href="/Admin/Personas" class="nav-link @(ViewData["Page"]?.ToString() == "personas" ? "active" : "")">
+                    <img src="~/images/icon_people.png" class="nav-icon" alt="Personas" /> Personas
                 </a>
             </li>
             <li>
-                <a href="/Admin/Catalogos" class="nav-link @(ViewData["Page"]?.ToString() == "catalogos" ? "active" : "")" title="Catálogos">
-                    <img src="~/images/icon_folder.png" class="nav-icon" alt="Catálogos" /> <span>Catálogos</span>
+                <a href="/Admin/Catalogos" class="nav-link @(ViewData["Page"]?.ToString() == "catalogos" ? "active" : "")">
+                    <img src="~/images/icon_folder.png" class="nav-icon" alt="Catálogos" /> Catálogos
                 </a>
             </li>
             <li>
-                <a href="/Admin/Guardias" class="nav-link @(ViewData["Page"]?.ToString() == "guardias" ? "active" : "")" title="Guardias">
-                    <img src="~/images/icon_shield.png" class="nav-icon" alt="Guardias" /> <span>Guardias</span>
+                <a href="/Admin/Guardias" class="nav-link @(ViewData["Page"]?.ToString() == "guardias" ? "active" : "")">
+                    <img src="~/images/icon_shield.png" class="nav-icon" alt="Guardias" /> Guardias
                 </a>
             </li>
         </ul>
         <div class="sidebar-footer">
             <span class="sidebar-user">@usuario</span>
-            <a href="/Admin/Logout" class="logout-link"><span>Salir →</span></a>
+            <a href="/Admin/Logout" class="logout-link">Salir →</a>
         </div>
     </nav>
 
     <!-- Main -->
     <main class="main-content">
         <div class="topbar">
-            <div style="display: flex; align-items: center;">
-                <button class="btn-toggle-sidebar" id="toggleSidebarBtn" title="Alternar menú">☰</button>
-                <h1 class="page-title">@ViewData["Title"]</h1>
-            </div>
+            <h1 class="page-title">@ViewData["Title"]</h1>
             <div class="topbar-actions">
-                <a href="/api/admin/exportar/excel" class="btn btn-ghost" target="_blank">⬇ Excel</a>
-                <a href="/api/admin/exportar/pdf" class="btn btn-ghost" target="_blank">⬇ PDF</a>
+                <a href="/api/admin/exportar/excel" class="btn btn-ghost" target="_blank">
+                    ⬇ Excel
+                </a>
+                <a href="/api/admin/exportar/pdf" class="btn btn-ghost" target="_blank">
+                    ⬇ PDF
+                </a>
                 <span class="topbar-time" id="clock"></span>
             </div>
         </div>
@@ -74,75 +72,11 @@ var usuario = User.Identity?.Name ?? "Admin";
     </main>
 
     <script>
-        (function() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const toggleBtn = document.getElementById('toggleSidebarBtn');
-        const STORAGE_KEY = 'sidebar-collapsed';
-
-        // Cargar estado guardado (solo escritorio)
-        function loadSidebarState() {
-        if (window.innerWidth > 768) {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved === 'true') {
-        sidebar.classList.add('collapsed');
-        } else {
-        sidebar.classList.remove('collapsed');
-        }
-        sidebar.classList.remove('mobile-open');
-        overlay.classList.remove('active');
-        } else {
-        // Móvil: cerrado por defecto
-        sidebar.classList.remove('collapsed', 'mobile-open');
-        overlay.classList.remove('active');
-        }
-        }
-
-        // Alternar colapso en escritorio, o abrir/cerrar en móvil
-        function toggleSidebar() {
-        if (window.innerWidth > 768) {
-        // Escritorio: alternar clase collapsed y guardar
-        sidebar.classList.toggle('collapsed');
-        const isCollapsed = sidebar.classList.contains('collapsed');
-        localStorage.setItem(STORAGE_KEY, isCollapsed);
-        } else {
-        // Móvil: abrir/cerrar superpuesto
-        if (sidebar.classList.contains('mobile-open')) {
-        sidebar.classList.remove('mobile-open');
-        overlay.classList.remove('active');
-        } else {
-        sidebar.classList.add('mobile-open');
-        overlay.classList.add('active');
-        }
-        }
-        }
-
-        // Cerrar sidebar móvil al tocar overlay
-        overlay.addEventListener('click', function() {
-        if (window.innerWidth <= 768) {
-        sidebar.classList.remove('mobile-open');
-        overlay.classList.remove('active');
-        }
-        });
-
-        // Evento de toggle
-        toggleBtn.addEventListener('click', toggleSidebar);
-
-        // Ajustar al redimensionar ventana
-        window.addEventListener('resize', function() {
-        loadSidebarState();
-        });
-
-        // Inicializar
-        loadSidebarState();
-
-        // Reloj
         function tick() {
         const el = document.getElementById('clock');
         if (el) el.textContent = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
         }
         tick(); setInterval(tick, 1000);
-        })();
     </script>
     @RenderSection("Scripts", required: false)
 </body>
