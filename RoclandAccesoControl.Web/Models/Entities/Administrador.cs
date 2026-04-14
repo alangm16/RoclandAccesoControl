@@ -6,7 +6,7 @@
         public string Nombre { get; set; } = string.Empty;
         public string Usuario { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
-        public string Rol { get; set; } = "Admin"; // "Admin" | "Supervisor"
+        public string Rol { get; set; } = "Admin"; // "Admin" | "Supervisor" forzar push remoto
         public bool Activo { get; set; } = true;
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
     }
