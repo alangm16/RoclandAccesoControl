@@ -358,7 +358,8 @@ thead th {
     letter-spacing: 0.5px;
     text-transform: uppercase;
     border-bottom: 1px solid var(--border);
-    white-space: nowrap;
+    white-space: normal; /* <-- CAMBIA 'nowrap' a 'normal' */
+    line-height: 1.3; /* <-- Añade esto para que el texto apilado se lea bien */
 }
 
 tbody td {
@@ -895,7 +896,9 @@ body.sidebar-collapsed .main-content {
 
 /* Mejora para celdas de tablas en general */
 table th, table td {
-    white-space: nowrap;
+    white-space: normal; /* Permite que el texto salte a la siguiente línea */
+    word-break: break-word; /* Rompe palabras muy largas (como correos o IDs) si no caben */
+    min-width: 80px; /* Evita que las columnas se aplasten demasiado */
 }
 
 /* Para pantallas muy pequeñas, permitir wrap en algunas celdas */
