@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model RoclandAccesoControl.Web.Pages.Admin.DashboardModel
 @{
     Layout = "_AdminLayout";
@@ -44,161 +44,433 @@
 <div class="table-card mb-4" style="margin-bottom:24px;">
     <div class="table-header">
         <span class="table-title">● Dentro ahora</span>
-        <button class="btn btn-ghost btn-sm" onclick="cargarActivos()">↻ Actualizar</button>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span id="live-indicator" style="font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;">
+                <span id="live-dot" style="width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;"></span>
+                <span id="live-text">Conectando...</span>
+            </span>
+            <button class="btn btn-ghost btn-sm" onclick="cargarActivos()">↻ Actualizar</button>
+        </div>
     </div>
-    <div class="activos-grid" id="activos-container" style="padding:16px;">
-        <div class="text-muted text-mono" style="font-size:12px;">Cargando...</div>
+
+    <!-- Visitantes dentro -->
+    <div style="padding:16px 20px 0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blue);letter-spacing:1px;text-transform:uppercase;">
+                👤 Visitantes
+            </span>
+            <span id="badge-visitantes" style="background:#EFF6FF;color:var(--blue);border:1px solid #BFDBFE;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;">0</span>
+        </div>
+        <div class="activos-grid" id="activos-visitantes">
+            <div class="text-muted text-mono" style="font-size:12px;">Cargando...</div>
+        </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+
+    <!-- Proveedores dentro -->
+    <div style="padding:12px 20px 16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--purple);letter-spacing:1px;text-transform:uppercase;">
+                🚚 Proveedores
+            </span>
+            <span id="badge-proveedores" style="background:#F5F3FF;color:var(--purple);border:1px solid #DDD6FE;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;">0</span>
+        </div>
+        <div class="activos-grid" id="activos-proveedores">
+            <div class="text-muted text-mono" style="font-size:12px;">Cargando...</div>
+        </div>
     </div>
 </div>
 
-<!-- Gráficas -->
-<div class="charts-grid">
+<!-- Gráficas: Flujo por hora + Áreas más visitadas -->
+<div class="charts-grid" style="margin-bottom:24px;">
     <div class="chart-card">
         <div class="chart-title">Flujo por hora — hoy</div>
-        <canvas id="chartHoras" height="200"></canvas>
+        <div class="chart-wrapper">
+            <canvas id="chartHoras"></canvas>
+        </div>
     </div>
     <div class="chart-card">
         <div class="chart-title">Áreas más visitadas (30 días)</div>
-        <canvas id="chartAreas" height="200"></canvas>
+        <div class="chart-wrapper">
+            <canvas id="chartAreas"></canvas>
+        </div>
     </div>
 </div>
 
+<!-- Flujo diario del mes -->
 <div class="chart-card" style="margin-bottom:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
         <div class="chart-title" style="margin:0;">Flujo diario del mes</div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-shrink:0;">
             <select id="selAnio" class="filter-input" style="min-width:80px;"></select>
             <select id="selMes" class="filter-input" style="min-width:120px;"></select>
         </div>
     </div>
-    <canvas id="chartMes" height="120"></canvas>
+    <div class="chart-wrapper chart-wrapper--wide">
+        <canvas id="chartMes"></canvas>
+    </div>
 </div>
 
 @section Scripts {
-    <script>
-        const colores = {
-            accent: '#3B82F6', green: '#22C55E', amber: '#F59E0B',
-            purple: '#8B5CF6', red: '#EF4444', muted: '#334155'
-        };
+<script>
+    // ── Colores y helpers ───────────────────────────────────────────────────
+    const colores = {
+        accent: '#3B82F6', green: '#22C55E', amber: '#F59E0B',
+        purple: '#8B5CF6', red: '#EF4444', muted: '#6B7280'
+    };
 
-        const chartDefaults = {
-            responsive: true,
-            plugins: { legend: { labels: { color: '#64748B', font: { family: 'IBM Plex Mono', size: 11 } } } },
-            scales: {
-                x: { grid: { color: '#1E2D45' }, ticks: { color: '#64748B', font: { family: 'IBM Plex Mono', size: 10 } } },
-                y: { grid: { color: '#1E2D45' }, ticks: { color: '#64748B', font: { family: 'IBM Plex Mono', size: 10 } }, beginAtZero: true }
+    function authHeader() {
+        return { 'Content-Type': 'application/json' };
+    }
+
+    function fmtHora(iso) {
+        return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Defaults Chart.js — responsive siempre activado, maintainAspectRatio en false
+    // para que el canvas se adapte al contenedor .chart-wrapper
+    const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: { color: '#6B7280', font: { family: 'IBM Plex Mono', size: 11 } }
             }
-        };
+        },
+        scales: {
+            x: {
+                grid: { color: '#E5E7EB' },
+                ticks: { color: '#6B7280', font: { family: 'IBM Plex Mono', size: 10 }, maxRotation: 45 }
+            },
+            y: {
+                grid: { color: '#E5E7EB' },
+                ticks: { color: '#6B7280', font: { family: 'IBM Plex Mono', size: 10 } },
+                beginAtZero: true
+            }
+        }
+    };
 
-        // ── KPIs ──────────────────────────────────────────────────────────────
-        async function cargarKpis() {
+    // ── KPIs ────────────────────────────────────────────────────────────────
+    async function cargarKpis() {
+        try {
             const r = await fetch('/api/admin/kpis', { headers: authHeader() });
             if (!r.ok) return;
             const d = await r.json();
-            document.getElementById('kpi-dentro').textContent = d.dentroAhora;
-            document.getElementById('kpi-total').textContent = d.totalHoy;
-            document.getElementById('kpi-vis').textContent = d.totalVisitantesHoy;
-            document.getElementById('kpi-prov').textContent = d.totalProveedoresHoy;
-            document.getElementById('kpi-prom').textContent = d.promedioEstanciaMinutos;
-            document.getElementById('kpi-pend').textContent = d.solicitudesPendientes;
+            document.getElementById('kpi-dentro').textContent = d.dentroAhora ?? '—';
+            document.getElementById('kpi-total').textContent = d.totalHoy ?? '—';
+            document.getElementById('kpi-vis').textContent = d.totalVisitantesHoy ?? '—';
+            document.getElementById('kpi-prov').textContent = d.totalProveedoresHoy ?? '—';
+            document.getElementById('kpi-prom').textContent = d.promedioEstanciaMinutos ?? '—';
+            document.getElementById('kpi-pend').textContent = d.solicitudesPendientes ?? '—';
+        } catch (e) {
+            console.warn('Error cargando KPIs:', e);
         }
+    }
 
-        // ── Activos (Separados en Visitantes y Proveedores) ───────────────────
-        async function cargarActivos() {
+    // ── Activos: Visitantes y Proveedores separados ─────────────────────────
+    async function cargarActivos() {
+        try {
             const r = await fetch('/api/guardias/activosZona', { headers: authHeader(), credentials: 'include' });
             const data = r.ok ? await r.json() : [];
-            const cont = document.getElementById('activos-container');
 
-            if (!data.length) {
-                cont.innerHTML = '<div class="text-muted text-mono" style="font-size:12px;padding:8px 0;">Sin personas dentro actualmente.</div>';
-                return;
-            }
-
-            // Separar data
             const visitantes = data.filter(a => a.tipoRegistro === 'Visitante');
             const proveedores = data.filter(a => a.tipoRegistro === 'Proveedor');
 
-            let html = '';
+            // Actualizar badges
+            document.getElementById('badge-visitantes').textContent = visitantes.length;
+            document.getElementById('badge-proveedores').textContent = proveedores.length;
 
-            // Renderizar Visitantes
-            if (visitantes.length > 0) {
-                html += '<h5 style="color:#64748B; font-size:13px; margin: 0 0 8px 0; width: 100%; text-transform: uppercase;">Visitantes</h5>';
-                html += visitantes.map(a => `
-                    <div class="activo-card" style="border-left: 3px solid ${colores.accent};">
+            // Render visitantes
+            const contV = document.getElementById('activos-visitantes');
+            if (visitantes.length === 0) {
+                contV.innerHTML = '<div class="text-muted text-mono" style="font-size:12px;padding:4px 0 12px;">Sin visitantes dentro actualmente.</div>';
+            } else {
+                contV.innerHTML = visitantes.map(a => `
+                    <div class="activo-card" style="border-left:4px solid ${colores.accent};">
                         <div class="activo-name">${a.nombrePersona}</div>
-                        <div class="activo-meta">${a.empresa || 'Particular'} · ${a.area}</div>
+                        <div class="activo-meta">${a.empresa || 'Particular'} · ${a.area || '—'}</div>
                         <div class="activo-meta">Entrada: ${fmtHora(a.fechaEntrada)}</div>
                         <div class="activo-gafete"># ${a.numeroGafete || '—'}</div>
                     </div>`).join('');
             }
 
-            // Renderizar Proveedores
-            if (proveedores.length > 0) {
-                html += '<h5 style="color:#64748B; font-size:13px; margin: 16px 0 8px 0; width: 100%; text-transform: uppercase;">Proveedores</h5>';
-                html += proveedores.map(a => `
-                    <div class="activo-card" style="border-left: 3px solid ${colores.purple};">
+            // Render proveedores
+            const contP = document.getElementById('activos-proveedores');
+            if (proveedores.length === 0) {
+                contP.innerHTML = '<div class="text-muted text-mono" style="font-size:12px;padding:4px 0 12px;">Sin proveedores dentro actualmente.</div>';
+            } else {
+                contP.innerHTML = proveedores.map(a => `
+                    <div class="activo-card" style="border-left:4px solid ${colores.purple};">
                         <div class="activo-name">${a.nombrePersona}</div>
                         <div class="activo-meta">${a.empresa || 'Independiente'}</div>
                         <div class="activo-meta">Entrada: ${fmtHora(a.fechaEntrada)}</div>
-                        <div class="activo-gafete"># ${a.numeroGafete || '—'}</div>
+                        <div class="activo-gafete" style="background:#F5F3FF;color:var(--purple);border-color:#DDD6FE;"># ${a.numeroGafete || '—'}</div>
                     </div>`).join('');
             }
-
-            cont.innerHTML = html;
+        } catch (e) {
+            console.warn('Error cargando activos:', e);
         }
+    }
 
-        // ── Gráficas (Se mantienen igual) ──────────────────────────────────────
-        let chartHoras, chartAreas, chartMes;
-        async function cargarGraficaHoras() { /* Tu código original */ }
-        async function cargarGraficaAreas() { /* Tu código original */ }
-        async function cargarGraficaMes() { /* Tu código original */ }
-        function initSelectores() { /* Tu código original */ }
-        function authHeader() { return { 'Content-Type': 'application/json' }; }
-        function fmtHora(iso) { return new Date(iso).toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'}); }
+    // ── Gráfica: Flujo por hora ─────────────────────────────────────────────
+    let chartHoras = null;
+    async function cargarGraficaHoras() {
+        try {
+            const r = await fetch('/api/admin/grafica/horas', { headers: authHeader() });
+            if (!r.ok) return;
+            const data = await r.json();
 
-        // ── SIGNALR EN VIVO ───────────────────────────────────────────────────
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/accesohub")
-            .configureLogging(signalR.LogLevel.Information)
-            .build();
+            const labels = data.map(d => d.hora + ':00');
+            const valores = data.map(d => d.total);
 
-        // 1. Alguien solicita entrar (Actualizar número de Pendientes)
-        connection.on("NuevaSolicitud", function () {
-            cargarKpis();
-        });
-
-        // 2. Se aprueba/rechaza (Actualizar KPIs y lista de "Dentro Ahora" si fue aprobado)
-        connection.on("SolicitudResuelta", function () {
-            cargarKpis();
-            cargarActivos();
-            cargarGraficaHoras(); // Opcional: Actualizar gráficas en vivo
-        });
-
-        // 3. Alguien sale (Quitar de "Dentro Ahora" y recalcular tiempos)
-        connection.on("SalidaRegistrada", function () {
-            cargarKpis();
-            cargarActivos();
-        });
-
-        async function startSignalR() {
-            try {
-                await connection.start();
-                console.log("Conectado a SignalR - Dashboard en Vivo");
-            } catch (err) {
-                console.log("Error conectando a SignalR, reintentando...", err);
-                setTimeout(startSignalR, 5000);
+            if (chartHoras) {
+                chartHoras.data.labels = labels;
+                chartHoras.data.datasets[0].data = valores;
+                chartHoras.update('none');
+            } else {
+                const ctx = document.getElementById('chartHoras').getContext('2d');
+                chartHoras = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Accesos',
+                            data: valores,
+                            backgroundColor: colores.accent + 'BB',
+                            borderColor: colores.accent,
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        }]
+                    },
+                    options: {
+                        ...chartDefaults,
+                        plugins: {
+                            ...chartDefaults.plugins,
+                            legend: { display: false }
+                        }
+                    }
+                });
             }
+        } catch (e) {
+            console.warn('Error cargando gráfica horas:', e);
+        }
+    }
+
+    // ── Gráfica: Áreas más visitadas ────────────────────────────────────────
+    let chartAreas = null;
+    async function cargarGraficaAreas() {
+        try {
+            const r = await fetch('/api/admin/grafica/areas', { headers: authHeader() });
+            if (!r.ok) return;
+            const data = await r.json();
+
+            const labels = data.map(d => d.area);
+            const valores = data.map(d => d.total);
+            const bgColors = [colores.accent, colores.purple, colores.amber, colores.blue, colores.red,
+                '#06B6D4', '#10B981', '#F97316', '#EC4899', '#84CC16'];
+
+            if (chartAreas) {
+                chartAreas.data.labels = labels;
+                chartAreas.data.datasets[0].data = valores;
+                chartAreas.update('none');
+            } else {
+                const ctx = document.getElementById('chartAreas').getContext('2d');
+                chartAreas = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: valores,
+                            backgroundColor: bgColors.slice(0, labels.length),
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    color: '#6B7280',
+                                    font: { family: 'IBM Plex Mono', size: 10 },
+                                    boxWidth: 12,
+                                    padding: 10
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('Error cargando gráfica áreas:', e);
+        }
+    }
+
+    // ── Gráfica: Flujo diario del mes ───────────────────────────────────────
+    let chartMes = null;
+    async function cargarGraficaMes() {
+        const anio = document.getElementById('selAnio').value;
+        const mes = document.getElementById('selMes').value;
+        if (!anio || !mes) return;
+
+        try {
+            const r = await fetch(`/api/admin/grafica/mes?anio=${anio}&mes=${mes}`, { headers: authHeader() });
+            if (!r.ok) return;
+            const data = await r.json();
+
+            const labels = data.map(d => `${d.dia}`);
+            const valores = data.map(d => d.total);
+
+            if (chartMes) {
+                chartMes.data.labels = labels;
+                chartMes.data.datasets[0].data = valores;
+                chartMes.update('none');
+            } else {
+                const ctx = document.getElementById('chartMes').getContext('2d');
+                chartMes = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Accesos por día',
+                            data: valores,
+                            borderColor: colores.green,
+                            backgroundColor: colores.green + '22',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: colores.green,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                        }]
+                    },
+                    options: {
+                        ...chartDefaults,
+                        plugins: {
+                            ...chartDefaults.plugins,
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('Error cargando gráfica mes:', e);
+        }
+    }
+
+    // ── Selectores de Año/Mes ────────────────────────────────────────────────
+    function initSelectores() {
+        const selAnio = document.getElementById('selAnio');
+        const selMes = document.getElementById('selMes');
+        const hoy = new Date();
+        const anioActual = hoy.getFullYear();
+
+        for (let y = anioActual; y >= anioActual - 3; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            selAnio.appendChild(opt);
         }
 
-        // ── Init ───────────────────────────────────────────────────────────────
-        (async () => {
-            initSelectores();
-            // Primera carga normal
-            await Promise.all([cargarKpis(), cargarActivos(), cargarGraficaHoras(), cargarGraficaAreas()]);
-            await cargarGraficaMes();
-            
-            // Iniciar conexión en tiempo real (Reemplaza el setInterval)
-            startSignalR();
-        })();
-    </script>
+        const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                       'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        meses.forEach((m, i) => {
+            const opt = document.createElement('option');
+            opt.value = i + 1;
+            opt.textContent = m;
+            selMes.appendChild(opt);
+        });
+
+        selAnio.value = anioActual;
+        selMes.value = hoy.getMonth() + 1;
+
+        selAnio.addEventListener('change', cargarGraficaMes);
+        selMes.addEventListener('change', cargarGraficaMes);
+    }
+
+    // ── SignalR en tiempo real ──────────────────────────────────────────────
+    function setLiveStatus(status) {
+        const dot = document.getElementById('live-dot');
+        const txt = document.getElementById('live-text');
+        if (status === 'connected') {
+            dot.style.background = '#22C55E';
+            dot.style.boxShadow = '0 0 6px #22C55E';
+            txt.textContent = 'En vivo';
+        } else if (status === 'reconnecting') {
+            dot.style.background = '#F59E0B';
+            dot.style.boxShadow = '0 0 6px #F59E0B';
+            txt.textContent = 'Reconectando...';
+        } else {
+            dot.style.background = '#EF4444';
+            dot.style.boxShadow = 'none';
+            txt.textContent = 'Desconectado';
+        }
+    }
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/accesohub")
+        .withAutomaticReconnect([2000, 5000, 10000, 30000])
+        .configureLogging(signalR.LogLevel.Warning)
+        .build();
+
+    // Nueva solicitud → actualizar pendientes
+    connection.on("NuevaSolicitud", () => {
+        cargarKpis();
+    });
+
+    // Solicitud resuelta → actualizar KPIs, activos y gráfica de horas
+    connection.on("SolicitudResuelta", () => {
+        cargarKpis();
+        cargarActivos();
+        cargarGraficaHoras();
+    });
+
+    // Salida registrada → actualizar KPIs y activos
+    connection.on("SalidaRegistrada", () => {
+        cargarKpis();
+        cargarActivos();
+    });
+
+    connection.onreconnecting(() => setLiveStatus('reconnecting'));
+    connection.onreconnected(() => setLiveStatus('connected'));
+    connection.onclose(() => {
+        setLiveStatus('disconnected');
+        // Reintento manual tras cierre definitivo
+        setTimeout(startSignalR, 10000);
+    });
+
+    async function startSignalR() {
+        try {
+            await connection.start();
+            setLiveStatus('connected');
+        } catch (err) {
+            console.warn('SignalR: error al conectar, reintentando...', err);
+            setLiveStatus('disconnected');
+            setTimeout(startSignalR, 8000);
+        }
+    }
+
+    // ── Polling de respaldo para KPIs (cada 30s, por si SignalR falla) ──────
+    // Solo actualiza si SignalR está desconectado
+    setInterval(() => {
+        if (connection.state !== signalR.HubConnectionState.Connected) {
+            cargarKpis();
+        }
+    }, 30000);
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    (async () => {
+        initSelectores();
+        await Promise.all([
+            cargarKpis(),
+            cargarActivos(),
+            cargarGraficaHoras(),
+            cargarGraficaAreas()
+        ]);
+        await cargarGraficaMes();
+        startSignalR();
+    })();
+</script>
 }
