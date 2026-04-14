@@ -25,28 +25,27 @@ public class FcmTokenService
 #if ANDROID
         try
         {
-            // 1. Intentar leer token guardado localmente
-            var token = Preferences.Get(MyFirebaseMessagingService.PrefKey, string.Empty);
+            // Siempre pedimos el token directamente a Firebase para evitar usar uno expirado en caché
+            var tcs = new TaskCompletionSource<string>();
 
-            // 2. Si no hay token guardado, pedirlo a Firebase directamente (primera vez)
-            if (string.IsNullOrEmpty(token))
-            {
-                var tcs = new TaskCompletionSource<string>();
+            FirebaseMessaging.Instance.GetToken()
+                .AddOnCompleteListener(new OnCompleteListenerToken(tcs));
 
-                FirebaseMessaging.Instance.GetToken()
-                    .AddOnCompleteListener(new OnCompleteListenerToken(tcs));
-
-                token = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(10))
-                        .ConfigureAwait(false);
-
-                if (!string.IsNullOrEmpty(token))
-                    Preferences.Set(MyFirebaseMessagingService.PrefKey, token);
-            }
+            var token = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(10))
+                    .ConfigureAwait(false);
 
             if (!string.IsNullOrEmpty(token))
             {
+                // Lo guardamos localmente por si lo ocupamos en otro lado
+                Preferences.Set(MyFirebaseMessagingService.PrefKey, token);
+
+                // Lo enviamos a la BD
                 await _api.RegistrarFcmTokenAsync(_auth.GuardiaId, token);
-                System.Diagnostics.Debug.WriteLine($"[FCM] Token registrado: {token[..10]}...");
+                System.Diagnostics.Debug.WriteLine($"[FCM] Token registrado con éxito: {token[..10]}...");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[FCM] Firebase no devolvió un token.");
             }
         }
         catch (Exception ex)

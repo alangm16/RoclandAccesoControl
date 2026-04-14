@@ -2,6 +2,9 @@
 using System.Text;
 using System.Text.Json;
 using RoclandAccesoControl.Web.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using RoclandAccesoControl.Web.Data;
 
 namespace RoclandAccesoControl.Web.Services;
 
@@ -10,16 +13,17 @@ public class FcmService : IFcmService
     private readonly HttpClient _http;
     private readonly IConfiguration _config;
     private readonly ILogger<FcmService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory; // <-- Agregado para la base de datos
 
-    // FCM v1 API endpoint — reemplaza el API legacy que Google deprecó
     private string FcmEndpoint =>
         $"https://fcm.googleapis.com/v1/projects/{_config["Firebase:ProjectId"]}/messages:send";
 
-    public FcmService(HttpClient http, IConfiguration config, ILogger<FcmService> logger)
+    public FcmService(HttpClient http, IConfiguration config, ILogger<FcmService> logger, IServiceScopeFactory scopeFactory)
     {
         _http = http;
         _config = config;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task EnviarAsync(string deviceToken, string titulo, string cuerpo,
@@ -27,7 +31,6 @@ public class FcmService : IFcmService
     {
         try
         {
-            // Obtener access token OAuth2 con la service account key
             var accessToken = await ObtenerAccessTokenAsync();
 
             var payloadData = data ?? new Dictionary<string, string>();
@@ -39,16 +42,8 @@ public class FcmService : IFcmService
                 message = new
                 {
                     token = deviceToken,
-                    // 1. ELIMINAMOS EL NODO 'notification' POR COMPLETO
-
-                    // 2. Pasamos todo por el nodo 'data'
                     data = payloadData,
-
-                    android = new
-                    {
-                        priority = "HIGH"
-                        // También eliminamos el bloque de 'notification' dentro de android
-                    }
+                    android = new { priority = "HIGH" }
                 }
             };
 
@@ -64,6 +59,12 @@ public class FcmService : IFcmService
             {
                 var error = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning("FCM error para token {Token}: {Error}", deviceToken[..10], error);
+
+                // 👇 RUTINA DE LIMPIEZA AUTOMÁTICA
+                if (error.Contains("UNREGISTERED") || response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await LimpiarTokenMuertoAsync(deviceToken);
+                }
             }
         }
         catch (Exception ex)
@@ -72,9 +73,30 @@ public class FcmService : IFcmService
         }
     }
 
+    // Nuevo método para borrar el token de la DB
+    private async Task LimpiarTokenMuertoAsync(string tokenInvalido)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<RoclandDbContext>();
+
+            var guardia = await db.Guardias.FirstOrDefaultAsync(g => g.FcmToken == tokenInvalido);
+            if (guardia != null)
+            {
+                guardia.FcmToken = null;
+                await db.SaveChangesAsync();
+                _logger.LogInformation("Token obsoleto eliminado exitosamente para el guardia ID: {GuardiaId}", guardia.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al intentar limpiar el token inválido de la base de datos.");
+        }
+    }
+
     private async Task<string> ObtenerAccessTokenAsync()
     {
-        // Leer la service account key JSON desde configuración
         var serviceAccountJson = _config["Firebase:ServiceAccountJson"]!;
         var serviceAccount = JsonSerializer.Deserialize<JsonElement>(serviceAccountJson);
 
@@ -82,7 +104,6 @@ public class FcmService : IFcmService
         var privateKey = serviceAccount.GetProperty("private_key").GetString()!
             .Replace("\\n", "\n");
 
-        // Crear JWT para autenticar con Google OAuth2
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var header = Base64UrlEncode(JsonSerializer.Serialize(new { alg = "RS256", typ = "JWT" }));
         var claims = Base64UrlEncode(JsonSerializer.Serialize(new
@@ -99,7 +120,6 @@ public class FcmService : IFcmService
         var signature = FirmarConRSA(signingInput, privateKey);
         var jwt = $"{signingInput}.{signature}";
 
-        // Intercambiar JWT por access token
         var tokenResp = await _http.PostAsync(
             "https://oauth2.googleapis.com/token",
             new FormUrlEncodedContent(new Dictionary<string, string>
