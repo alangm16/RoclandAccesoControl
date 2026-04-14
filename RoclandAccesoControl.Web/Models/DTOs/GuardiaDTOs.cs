@@ -34,7 +34,8 @@ public record SolicitudPendienteResponse(
     string TipoID,
     string Motivo,
     string? Area,
-    DateTime FechaSolicitud
+    DateTime FechaSolicitud,
+    string? Placas
 );
 
 public record AccesoActivoResponse(

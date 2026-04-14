@@ -221,6 +221,7 @@ public class AccesoService : IAccesoService
         {
             string motivo = "";
             string area = "";
+            string? placas = null;
 
             if (s.TipoRegistro == "Visitante")
             {
@@ -239,6 +240,7 @@ public class AccesoService : IAccesoService
                     .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
 
                 motivo = reg?.Motivo?.Nombre ?? "";
+                placas = reg?.UnidadPlacas;
             }
 
             respuestas.Add(new SolicitudPendienteResponse(
@@ -252,7 +254,8 @@ public class AccesoService : IAccesoService
                 TipoID: s.Persona.TipoIdentificacion?.Nombre ?? "",
                 Motivo: motivo,
                 Area: area,
-                FechaSolicitud: s.FechaSolicitud
+                FechaSolicitud: s.FechaSolicitud,
+                Placas: placas
             ));
         }
 
@@ -269,6 +272,7 @@ public class AccesoService : IAccesoService
 
         string motivo = "";
         string area = "";
+        string? placas = null;
 
         if (s.TipoRegistro == "Visitante")
         {
@@ -287,6 +291,7 @@ public class AccesoService : IAccesoService
                 .FirstOrDefaultAsync(r => r.Id == s.RegistroId);
 
             motivo = reg?.Motivo?.Nombre ?? "";
+            placas = reg?.UnidadPlacas;
         }
 
         return new SolicitudPendienteResponse(
@@ -300,7 +305,8 @@ public class AccesoService : IAccesoService
             TipoID: s.Persona?.TipoIdentificacion?.Nombre ?? "",
             Motivo: motivo,
             Area: area,
-            FechaSolicitud: s.FechaSolicitud
+            FechaSolicitud: s.FechaSolicitud,
+            Placas: placas
         );
     }
 

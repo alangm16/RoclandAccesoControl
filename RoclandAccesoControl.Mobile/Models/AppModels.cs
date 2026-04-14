@@ -21,6 +21,7 @@ public class SolicitudPendiente
     public string TipoID { get; set; } = string.Empty;
     public string Motivo { get; set; } = string.Empty;
     public string? Area { get; set; }
+    public string? Placas { get; set; }     // UnidadPlacas del RegistroProveedor; null para Visitante
     public DateTime FechaSolicitud { get; set; }
 
     // Computed para la UI

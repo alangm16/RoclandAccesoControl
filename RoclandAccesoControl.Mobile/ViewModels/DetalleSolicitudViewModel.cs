@@ -184,13 +184,13 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
 
         // Verificar placas si es proveedor/cliente y tiene placas registradas
         bool requierePlacas = (Solicitud.TipoRegistro == "Proveedor" || Solicitud.TipoRegistro == "Cliente")
-                              && !string.IsNullOrWhiteSpace(null/*Solicitud.Placas*/);
+                              && !string.IsNullOrWhiteSpace(Solicitud.Placas);
         if (requierePlacas)
         {
             var placasPopup = new VerificarDatoPopup(
                 "Verificar placas",
                 "¿Las placas del vehículo coinciden con las registradas?",
-                null/*Solicitud.Placas*/);
+                Solicitud.Placas);
             var placasOk = await Shell.Current.CurrentPage.ShowPopupAsync<bool>(placasPopup);
             if (!placasOk.Result)
             {
