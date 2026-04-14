@@ -320,8 +320,11 @@
             if (!r.ok) return;
             const data = await r.json();
 
-            const labels = data.map(d => `${d.dia}`);
-            const valores = data.map(d => d.total);
+                    // Usamos 'fecha' para las etiquetas de abajo (eje X)
+        const labels = data.map(d => d.fecha);
+
+        // Sumamos 'visitantes' y 'proveedores' para obtener el total del día (eje Y)
+        const valores = data.map(d => d.visitantes + d.proveedores);
 
             if (chartMes) {
                 chartMes.data.labels = labels;
