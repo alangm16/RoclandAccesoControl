@@ -7,7 +7,12 @@ namespace RoclandAccesoControl.Mobile;
 public partial class App : Application
 {
     private readonly AuthStateService _auth;
+
+    // ID de solicitud que llega por tap ANTES de que OnStart() termine.
     private string? _idNotificacionPendiente = null;
+
+    // Se vuelve true cuando OnStart() ya navegó a //Bitacora y el Shell está listo.
+    private bool _sesionLista = false;
 
     public App(AuthStateService auth)
     {
@@ -16,37 +21,41 @@ public partial class App : Application
 
         MainPage = new AppShell();
 
-        // Suscripción al evento
         LocalNotificationCenter.Current.NotificationActionTapped += OnNotificationTapped;
     }
 
     private void OnNotificationTapped(NotificationActionEventArgs e)
     {
-        MainThread.BeginInvokeOnMainThread(async () =>
+        string data = e.Request?.ReturningData ?? string.Empty;
+        System.Diagnostics.Debug.WriteLine($"[NOTIF TAP] ReturningData = '{data}' | SesionLista = {_sesionLista}");
+
+        if (string.IsNullOrEmpty(data))
+            return;
+
+        if (_sesionLista)
         {
-            // Espera a que la UI esté lista (especialmente tras un arranque en frío)
-            await Task.Delay(300);
-
-            string data = e.Request?.ReturningData ?? string.Empty;
-            System.Diagnostics.Debug.WriteLine($"[NOTIF TAP] ReturningData = '{data}'");
-
-            if (string.IsNullOrEmpty(data))
+            // App estaba abierta o en segundo plano con sesión activa → navegar directo.
+            MainThread.BeginInvokeOnMainThread(async () =>
             {
-                // Opcional: mostrar alerta solo para depuración
-                 await App.Current.MainPage.DisplayAlert("Sin datos", "No se recibió ID", "OK");
-                return;
-            }
-
-            try
-            {
-                await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={data}");
-            }
-            catch (Exception ex)
-            {
-                await App.Current.MainPage.DisplayAlert("Error Navegación", ex.Message, "OK");
-            }
-        });
+                try
+                {
+                    await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={data}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[NOTIF TAP] Error navegación: {ex.Message}");
+                }
+            });
+        }
+        else
+        {
+            // App arrancó en frío → guardar el ID; OnStart() lo consumirá
+            // después de restaurar la sesión y navegar a //Bitacora.
+            _idNotificacionPendiente = data;
+            System.Diagnostics.Debug.WriteLine($"[NOTIF TAP] ID guardado como pendiente: {data}");
+        }
     }
+
     protected override async void OnStart()
     {
         base.OnStart();
@@ -63,7 +72,9 @@ public partial class App : Application
             return;
         }
 
-        // 👉 FIX 3: Procesar la pendiente solo si la sesión se restauró con éxito
+        // A partir de aquí el Shell ya está en su ruta raíz → marcamos la sesión como lista.
+        _sesionLista = true;
+
         if (sesionRestaurada && !string.IsNullOrEmpty(_idNotificacionPendiente))
         {
             var id = _idNotificacionPendiente;
@@ -71,8 +82,17 @@ public partial class App : Application
 
             MainThread.BeginInvokeOnMainThread(async () =>
             {
-                await Task.Delay(500); // Esperar a que renderice Bitácora
-                await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={id}");
+                // Pequeño delay para que //Bitacora termine de renderizar antes de hacer push.
+                await Task.Delay(400);
+                System.Diagnostics.Debug.WriteLine($"[NOTIF PENDIENTE] Navegando a DetalleSolicitudPage?id={id}");
+                try
+                {
+                    await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={id}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[NOTIF PENDIENTE] Error navegación: {ex.Message}");
+                }
             });
         }
         else

@@ -103,6 +103,12 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
     private async Task AprobarAsync()
     {
         if (Solicitud is null) return;
+
+        // 1. Verificar datos con modales
+        bool datosVerificados = await VerificarDatosAsync();
+        if (!datosVerificados) return;
+
+        // 2. Continuar con el flujo original (selección de gafete y confirmación)
         if (GafeteSeleccionado is null)
         {
             var toast = new ErrorToast("Gafete requerido", "Debes seleccionar un gafete disponible.");
@@ -110,16 +116,9 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
             return;
         }
 
-        var popup =
-            new ConfirmarAprobacionPopup(
-                Solicitud.NombrePersona,
-                GafeteSeleccionado.Codigo);
-
-        var popupResult =
-            await Shell.Current.CurrentPage.ShowPopupAsync<bool>(popup);
-
+        var popup = new ConfirmarAprobacionPopup(Solicitud.NombrePersona, GafeteSeleccionado.Codigo);
+        var popupResult = await Shell.Current.CurrentPage.ShowPopupAsync<bool>(popup);
         bool confirmacion = popupResult.Result;
-
         if (!confirmacion) return;
 
         EstaCargando = true;
@@ -155,6 +154,60 @@ public partial class DetalleSolicitudViewModel : BaseViewModel
             EstaCargando = false;
         }
     }
+
+    private async Task<bool> VerificarDatosAsync()
+    {
+        // Verificar nombre
+        var nombrePopup = new VerificarDatoPopup(
+            "Verificar nombre",
+            "¿El nombre en la INE coincide con el siguiente?",
+            Solicitud!.NombrePersona);
+        var nombreOk = await Shell.Current.CurrentPage.ShowPopupAsync<bool>(nombrePopup);
+        if (!nombreOk.Result)
+        {
+            await MostrarCancelacionVerificacion();
+            return false;
+        }
+
+        // Verificar identificación (tipo + número)
+        string idCompleto = $"{Solicitud.TipoID}: {Solicitud.NumeroIdentificacion}";
+        var idPopup = new VerificarDatoPopup(
+            "Verificar identificación",
+            "¿El tipo y número de identificación coinciden con la INE?",
+            idCompleto);
+        var idOk = await Shell.Current.CurrentPage.ShowPopupAsync<bool>(idPopup);
+        if (!idOk.Result)
+        {
+            await MostrarCancelacionVerificacion();
+            return false;
+        }
+
+        // Verificar placas si es proveedor/cliente y tiene placas registradas
+        bool requierePlacas = (Solicitud.TipoRegistro == "Proveedor" || Solicitud.TipoRegistro == "Cliente")
+                              && !string.IsNullOrWhiteSpace(null/*Solicitud.Placas*/);
+        if (requierePlacas)
+        {
+            var placasPopup = new VerificarDatoPopup(
+                "Verificar placas",
+                "¿Las placas del vehículo coinciden con las registradas?",
+                null/*Solicitud.Placas*/);
+            var placasOk = await Shell.Current.CurrentPage.ShowPopupAsync<bool>(placasPopup);
+            if (!placasOk.Result)
+            {
+                await MostrarCancelacionVerificacion();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private async Task MostrarCancelacionVerificacion()
+    {
+        var toast = new ErrorToast("Verificación cancelada", "Los datos no coinciden. No se puede aprobar.");
+        await Shell.Current.CurrentPage.ShowPopupAsync(toast);
+    }
+
 
     [RelayCommand]
     private async Task RechazarAsync()
