@@ -124,7 +124,7 @@
                     <td class="text-mono" style="font-size:12px;">${r.fechaSalida ? fmtDT(r.fechaSalida) : '—'}</td>
                     <td class="text-mono">${r.minutosEstancia ?? '—'}</td>
                     <td>${estadoBadge(r.estadoAcceso)}</td>
-                    <td class="text-mono">${r.numeroGafete || '—'}</td>
+                    <td class="text-mono">${r.codigoGafete || '—'}</td>
                     <td class="text-muted">${r.guardia}</td>
                 </tr>`).join('');
         }
