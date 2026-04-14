@@ -4,6 +4,7 @@ using Android.Content.PM;
 using Android.Gms.Tasks;
 using Android.OS;
 using Android.Util;
+using Android.Widget;
 using AndroidX.AppCompat.App;
 using Firebase;
 using Firebase.Messaging;
@@ -14,7 +15,7 @@ namespace RoclandAccesoControl.Mobile;
 
 // 3. EL LAUNCHMODE ES CRÍTICO AQUÍ:
 [Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true,
-    LaunchMode = LaunchMode.SingleTop, // <-- ESTO FALTABA
+    LaunchMode = LaunchMode.SingleTask, // <-- ESTO FALTABA
     ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation |
     ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize |
     ConfigChanges.Density)]
@@ -23,18 +24,22 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
         var app = FirebaseApp.InitializeApp(this);
         AppCompatDelegate.DefaultNightMode = AppCompatDelegate.ModeNightNo;
-        if (app == null)
-            Log.Error("FCM", "Firebase no se inicializó correctamente");
-        else
-            Log.Debug("FCM", "Firebase inicializado correctamente");
 
         _ = GetFcmTokenAsync();
         CrearCanalNotificaciones();
         SolicitarPermisoNotificaciones();
+
+        if (Intent != null)
+        {
+            // ALERTA VISUAL 1
+
+            //Toast.MakeText(this, "APP ABIERTA DESDE NOTIFICACIÓN (OnCreate)", ToastLength.Long)?.Show();
+            LocalNotificationCenter.NotifyNotificationTapped(Intent);
+        }
     }
+
 
     // 4. ESTE ES EL PUENTE FALTANTE. Sin esto, el tap se pierde en el vacío.
     protected override void OnNewIntent(Intent? intent)
@@ -42,6 +47,8 @@ public class MainActivity : MauiAppCompatActivity
         base.OnNewIntent(intent);
         if (intent != null)
         {
+            // ALERTA VISUAL 2
+            //Toast.MakeText(this, "VOLVIÓ AL FRENTE POR NOTIFICACIÓN (OnNewIntent)", ToastLength.Long)?.Show();
             LocalNotificationCenter.NotifyNotificationTapped(intent);
         }
     }

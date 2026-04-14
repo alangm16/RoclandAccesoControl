@@ -7,11 +7,7 @@ namespace RoclandAccesoControl.Mobile;
 public partial class App : Application
 {
     private readonly AuthStateService _auth;
-
-    // Flag para saber si OnStart ya terminó de navegar a la ruta base.
-    // Si llega un tap ANTES de que la shell esté lista, lo guardamos aquí.
     private string? _idNotificacionPendiente = null;
-    private bool _shellLista = false;
 
     public App(AuthStateService auth)
     {
@@ -20,37 +16,45 @@ public partial class App : Application
 
         MainPage = new AppShell();
 
-        // Suscripción única al evento de tap en notificación
+        // Suscripción al evento
         LocalNotificationCenter.Current.NotificationActionTapped += OnNotificationTapped;
     }
 
     private void OnNotificationTapped(NotificationActionEventArgs e)
     {
-        // ReturningData contiene el solicitudId que guardamos al crear la notificación local.
-        var data = e.Request?.ReturningData;
-
-        System.Diagnostics.Debug.WriteLine($"[NAV] Notificación tapeada. ReturningData='{data}'");
-
-        if (string.IsNullOrEmpty(data)) return;
-
-        _idNotificacionPendiente = data;
-
-        // Solo intentamos navegar si la shell ya está lista (OnStart terminó).
-        // Si no, OnStart llamará a NavegarADetalleSiEsPosible() cuando termine.
-        if (_shellLista)
+        MainThread.BeginInvokeOnMainThread(async () =>
         {
-            NavegarADetalle(_idNotificacionPendiente);
-            _idNotificacionPendiente = null;
-        }
-    }
+            // Espera a que la UI esté lista (especialmente tras un arranque en frío)
+            await Task.Delay(300);
 
+            string data = e.Request?.ReturningData ?? string.Empty;
+            System.Diagnostics.Debug.WriteLine($"[NOTIF TAP] ReturningData = '{data}'");
+
+            if (string.IsNullOrEmpty(data))
+            {
+                // Opcional: mostrar alerta solo para depuración
+                 await App.Current.MainPage.DisplayAlert("Sin datos", "No se recibió ID", "OK");
+                return;
+            }
+
+            try
+            {
+                await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={data}");
+            }
+            catch (Exception ex)
+            {
+                await App.Current.MainPage.DisplayAlert("Error Navegación", ex.Message, "OK");
+            }
+        });
+    }
     protected override async void OnStart()
     {
         base.OnStart();
 
+        bool sesionRestaurada = false;
         try
         {
-            var sesionRestaurada = await _auth.RestaurarSesionAsync();
+            sesionRestaurada = await _auth.RestaurarSesionAsync();
             await Shell.Current.GoToAsync(sesionRestaurada ? "//Bitacora" : "//Login");
         }
         catch (Exception ex)
@@ -59,34 +63,21 @@ public partial class App : Application
             return;
         }
 
-        // La shell ya navegó a su ruta base. A partir de aquí es seguro navegar al detalle.
-        _shellLista = true;
-
-        // Si llegó un tap MIENTRAS OnStart estaba trabajando, lo procesamos ahora.
-        if (!string.IsNullOrEmpty(_idNotificacionPendiente))
+        // 👉 FIX 3: Procesar la pendiente solo si la sesión se restauró con éxito
+        if (sesionRestaurada && !string.IsNullOrEmpty(_idNotificacionPendiente))
         {
             var id = _idNotificacionPendiente;
             _idNotificacionPendiente = null;
-            NavegarADetalle(id);
-        }
-    }
 
-    private void NavegarADetalle(string solicitudId)
-    {
-        MainThread.BeginInvokeOnMainThread(async () =>
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Task.Delay(500); // Esperar a que renderice Bitácora
+                await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={id}");
+            });
+        }
+        else
         {
-            try
-            {
-                // Pequeña pausa para que la UI termine de renderizar la ruta base
-                await Task.Delay(400);
-                System.Diagnostics.Debug.WriteLine($"[NAV] Navegando a DetalleSolicitudPage?id={solicitudId}");
-                await Shell.Current.GoToAsync($"DetalleSolicitudPage?id={solicitudId}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[NAV Error] {ex.Message}");
-                await Shell.Current.DisplayAlert("Error de navegación", ex.Message, "OK");
-            }
-        });
+            _idNotificacionPendiente = null;
+        }
     }
 }
