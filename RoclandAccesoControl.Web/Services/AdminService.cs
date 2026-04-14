@@ -13,35 +13,44 @@ namespace RoclandAccesoControl.Web.Services;
 public class AdminService : IAdminService
 {
     private readonly RoclandDbContext _db;
+    private static readonly TimeZoneInfo _zonaHoraria =
+    TimeZoneInfo.FindSystemTimeZoneById("America/Monterrey");
 
     public AdminService(RoclandDbContext db) => _db = db;
 
     // ── KPIs ───────────────────────────────────────────────────────────
     public async Task<DashboardKpiDto> ObtenerKpisAsync()
     {
-        var hoy = DateTime.UtcNow.Date;
+        // 1. Obtener qué día es "hoy" en Torreón
+        var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _zonaHoraria);
+        var hoyLocal = ahoraLocal.Date;
+
+        // 2. Traducir ese día a un rango de horas UTC para poder buscar en la DB
+        var inicioDiaUtc = TimeZoneInfo.ConvertTimeToUtc(hoyLocal, _zonaHoraria);
+        var finDiaUtc = inicioDiaUtc.AddDays(1);
 
         var dentroAhora = await _db.RegistrosVisitantes
-            .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
-            + await _db.RegistrosProveedores
-            .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null);
+        .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+        + await _db.RegistrosProveedores
+        .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null);
 
+        // 3. Usar el rango UTC para filtrar de manera exacta en la Base de Datos
         var visitantesHoy = await _db.RegistrosVisitantes
-            .CountAsync(r => r.FechaEntrada.Date == hoy);
+            .CountAsync(r => r.FechaEntrada >= inicioDiaUtc && r.FechaEntrada < finDiaUtc);
 
         var proveedoresHoy = await _db.RegistrosProveedores
-            .CountAsync(r => r.FechaEntrada.Date == hoy);
+            .CountAsync(r => r.FechaEntrada >= inicioDiaUtc && r.FechaEntrada < finDiaUtc);
 
         var pendientes = await _db.SolicitudesPendientes
             .CountAsync(s => s.Estado == "Pendiente");
 
         var minutosVis = await _db.RegistrosVisitantes
-            .Where(r => r.FechaEntrada.Date == hoy && r.MinutosEstancia != null)
+            .Where(r => r.FechaEntrada.Date == inicioDiaUtc && r.MinutosEstancia != null)
             .Select(r => (double)r.MinutosEstancia!.Value)
             .ToListAsync();
 
         var minutosProv = await _db.RegistrosProveedores
-            .Where(r => r.FechaEntrada.Date == hoy && r.MinutosEstancia != null)
+            .Where(r => r.FechaEntrada.Date == inicioDiaUtc && r.MinutosEstancia != null)
             .Select(r => (double)r.MinutosEstancia!.Value)
             .ToListAsync();
 
@@ -217,9 +226,16 @@ public class AdminService : IAdminService
                                    .ToList();
 
         var total = union.Count;
-        var items = union.Skip((pagina - 1) * porPagina)
+        var itemsUtc = union.Skip((pagina - 1) * porPagina)
                          .Take(porPagina)
                          .ToList();
+
+        var items = itemsUtc.Select(r => new HistorialAccesoDto(
+            r.Id, r.Tipo, r.Nombre, r.Empresa, r.NumeroIdentificacion, r.Area, r.Motivo,
+            TimeZoneInfo.ConvertTimeFromUtc(r.FechaEntrada, _zonaHoraria),
+            r.FechaSalida.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(r.FechaSalida.Value, _zonaHoraria) : null,
+            r.MinutosEstancia, r.EstadoAcceso, r.CodigoGafete, r.Guardia
+        )).ToList();
 
         return (items, total);
     }
@@ -428,8 +444,8 @@ public class AdminService : IAdminService
             ws.Cell(row, 4).Value = item.NumeroIdentificacion;
             ws.Cell(row, 5).Value = item.Area ?? "";
             ws.Cell(row, 6).Value = item.Motivo;
-            ws.Cell(row, 7).Value = item.FechaEntrada.ToLocalTime().ToString("HH:mm");
-            ws.Cell(row, 8).Value = item.FechaSalida?.ToLocalTime().ToString("HH:mm") ?? "—";
+            ws.Cell(row, 7).Value = item.FechaEntrada.ToString("HH:mm");
+            ws.Cell(row, 8).Value = item.FechaSalida?.ToString("HH:mm") ?? "—";
             ws.Cell(row, 9).Value = item.MinutosEstancia?.ToString() ?? "—";
             ws.Cell(row, 10).Value = item.EstadoAcceso;
             ws.Cell(row, 11).Value = item.CodigoGafete ?? "—";
@@ -552,8 +568,8 @@ public class AdminService : IAdminService
                         Cell(item.NumeroIdentificacion);
                         Cell(item.Area ?? "—");
                         Cell(item.Motivo);
-                        Cell(item.FechaEntrada.ToLocalTime().ToString("HH:mm"));
-                        Cell(item.FechaSalida?.ToLocalTime().ToString("HH:mm") ?? "—");
+                        Cell(item.FechaEntrada.ToString("HH:mm"));
+                        Cell(item.FechaSalida?.ToString("HH:mm") ?? "—");
                         Cell(item.MinutosEstancia?.ToString() ?? "—");
                         Cell(item.EstadoAcceso, estadoColor);
                         Cell(item.CodigoGafete ?? "—");
