@@ -443,7 +443,7 @@ public class AccesoService : IAccesoService
 
             // Notificar por SignalR
             var guardia = await _db.Guardias.FindAsync(request.GuardiaId);
-            await _hub.Clients.Group("Guardias").SendAsync("SolicitudResuelta", new SolicitudResueltaEvent(
+            await _hub.Clients.All.SendAsync("SolicitudResuelta", new SolicitudResueltaEvent(
                 SolicitudId: request.SolicitudId,
                 Estado: "Aprobado",
                 NombreGuardia: guardia?.Nombre ?? ""
@@ -530,6 +530,7 @@ public class AccesoService : IAccesoService
         }
 
         await _db.SaveChangesAsync();
+        await _hub.Clients.All.SendAsync("SalidaRegistrada", request.RegistroId);
         return true;
     }
 

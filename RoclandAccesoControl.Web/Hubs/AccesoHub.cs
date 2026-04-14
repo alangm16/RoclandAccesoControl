@@ -4,7 +4,7 @@ using RoclandAccesoControl.Web.Models.DTOs;
 
 namespace RoclandAccesoControl.Web.Hubs;
 
-[Authorize(Roles = "Guardia")]
+[Authorize(AuthenticationSchemes = "AdminCookie,Bearer", Roles = "Guardia,Admin,Supervisor")]
 public class AccesoHub : Hub
 {
     // El servidor llama a este método para notificar a todos los guardias conectados
