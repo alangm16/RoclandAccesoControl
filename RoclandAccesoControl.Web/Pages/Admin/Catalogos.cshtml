@@ -20,13 +20,17 @@
             <button class="btn btn-primary btn-sm" onclick="agregar('area')">+ Agregar</button>
         </div>
         <div id="nuevoArea" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);">
-            <div style="display:flex;gap:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <input id="inputArea" type="text" class="filter-input" placeholder="Nombre del área" style="flex:1;" />
                 <button class="btn btn-primary btn-sm" onclick="crearCatalogo('area')">Guardar</button>
                 <button class="btn btn-ghost btn-sm" onclick="cancelar('area')">✕</button>
             </div>
         </div>
-        <table><tbody id="listaAreas"></tbody></table>
+        <div class="table-responsive">
+            <table>
+                <tbody id="listaAreas"></tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Motivos -->
@@ -36,13 +40,17 @@
             <button class="btn btn-primary btn-sm" onclick="agregar('motivo')">+ Agregar</button>
         </div>
         <div id="nuevoMotivo" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);">
-            <div style="display:flex;gap:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <input id="inputMotivo" type="text" class="filter-input" placeholder="Nombre del motivo" style="flex:1;" />
                 <button class="btn btn-primary btn-sm" onclick="crearCatalogo('motivo')">Guardar</button>
                 <button class="btn btn-ghost btn-sm" onclick="cancelar('motivo')">✕</button>
             </div>
         </div>
-        <table><tbody id="listaMotivos"></tbody></table>
+        <div class="table-responsive">
+            <table>
+                <tbody id="listaMotivos"></tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Tipos ID -->
@@ -52,13 +60,17 @@
             <button class="btn btn-primary btn-sm" onclick="agregar('tipoid')">+ Agregar</button>
         </div>
         <div id="nuevoTipoid" style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);">
-            <div style="display:flex;gap:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <input id="inputTipoid" type="text" class="filter-input" placeholder="Ej: Pasaporte" style="flex:1;" />
                 <button class="btn btn-primary btn-sm" onclick="crearCatalogo('tipoid')">Guardar</button>
                 <button class="btn btn-ghost btn-sm" onclick="cancelar('tipoid')">✕</button>
             </div>
         </div>
-        <table><tbody id="listaTipoids"></tbody></table>
+        <div class="table-responsive">
+            <table>
+                <tbody id="listaTipoids"></tbody>
+            </table>
+        </div>
     </div>
 
 </div>

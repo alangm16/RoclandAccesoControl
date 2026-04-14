@@ -759,3 +759,152 @@ select.form-control {
     object-fit: contain;
     filter: brightness(0) saturate(100%) /* convierte a monocromo si es necesario */;
 }
+
+/* ── Sidebar colapsable ────────────────────────────────────────── */
+.sidebar {
+    transition: transform 0.2s ease, width 0.2s ease;
+    width: var(--sidebar-w);
+}
+
+    .sidebar.collapsed {
+        transform: translateX(calc(-1 * var(--sidebar-w)));
+    }
+
+/* Botón toggle (se agrega en el layout) */
+.sidebar-toggle {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+    .sidebar-toggle:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+/* Cuando sidebar está colapsado, el main-content ocupa todo el ancho */
+body.sidebar-collapsed .main-content {
+    margin-left: 0;
+}
+
+/* ── Responsividad para móviles ────────────────────────────────── */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        z-index: 200;
+        box-shadow: var(--shadow-md);
+    }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+    .main-content {
+        margin-left: 0 !important;
+    }
+
+    .topbar {
+        padding: 12px 16px;
+    }
+
+    .page-body {
+        padding: 16px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .kpi-value {
+        font-size: 28px;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .activos-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-input {
+        width: 100%;
+        min-width: auto !important;
+    }
+
+    .topbar-actions {
+        gap: 8px;
+    }
+
+    .btn-ghost {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .topbar-time {
+        display: none; /* ocultar reloj en móvil para ahorrar espacio */
+    }
+
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal {
+        padding: 20px;
+    }
+
+    .modal-title {
+        font-size: 16px;
+    }
+
+    .table-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+}
+
+/* ── Scroll horizontal para tablas ─────────────────────────────── */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+    .table-responsive table {
+        min-width: 800px; /* fuerza scroll en pantallas pequeñas */
+    }
+
+/* Mejora para celdas de tablas en general */
+table th, table td {
+    white-space: nowrap;
+}
+
+/* Para pantallas muy pequeñas, permitir wrap en algunas celdas */
+@media (max-width: 640px) {
+    table td, table th {
+        white-space: normal;
+        word-break: break-word;
+        min-width: 100px;
+    }
+}
