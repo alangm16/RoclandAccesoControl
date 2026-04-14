@@ -62,6 +62,7 @@ body {
 .main-content {
     margin-left: var(--sidebar-w);
     flex: 1;
+    min-width: 0; /* <-- AÑADIR ESTA LÍNEA */
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -889,11 +890,8 @@ body.sidebar-collapsed .main-content {
 .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%; /* <-- Recomendable agregar esto */
 }
-
-    .table-responsive table {
-        min-width: 800px; /* fuerza scroll en pantallas pequeñas */
-    }
 
 /* Mejora para celdas de tablas en general */
 table th, table td {
