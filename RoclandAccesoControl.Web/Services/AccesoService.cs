@@ -15,8 +15,7 @@ public class AccesoService : IAccesoService
     private readonly IHubContext<AccesoHub> _hub;
     private readonly ILogger<AccesoService> _logger;
     private readonly IFcmService _fcm;
-    private static readonly TimeZoneInfo _zonaHoraria = TimeZoneInfo.FindSystemTimeZoneById("America/Monterrey");
-
+    private static readonly TimeSpan _offsetMexico = TimeSpan.FromHours(-6);
     public AccesoService(
         RoclandDbContext db,
         IHubContext<AccesoHub> hub,
@@ -363,7 +362,7 @@ public class AccesoService : IAccesoService
             NombrePersona: v.Persona.Nombre,
             Empresa: v.Persona.Empresa,
             NumeroGafete: v.Gafete?.Codigo ?? "",       // <-- Código del gafete
-            FechaEntrada: TimeZoneInfo.ConvertTimeFromUtc(v.FechaEntrada, _zonaHoraria),
+            FechaEntrada: v.FechaEntrada.Add(_offsetMexico),
             Area: v.Area.Nombre,
             MinutosLlevaDentro: (ahoraServidor - v.FechaEntrada).TotalMinutes
         )));
@@ -379,7 +378,7 @@ public class AccesoService : IAccesoService
             NombrePersona: p.Persona.Nombre,
             Empresa: p.Persona.Empresa,
             NumeroGafete: p.Gafete?.Codigo ?? "",
-            FechaEntrada: TimeZoneInfo.ConvertTimeFromUtc(p.FechaEntrada, _zonaHoraria),
+            FechaEntrada: p.FechaEntrada.Add(_offsetMexico),
             Area: "N/A",
             MinutosLlevaDentro: (ahoraServidor - p.FechaEntrada).TotalMinutes
         )));

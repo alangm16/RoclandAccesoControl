@@ -13,20 +13,20 @@ namespace RoclandAccesoControl.Web.Services;
 public class AdminService : IAdminService
 {
     private readonly RoclandDbContext _db;
-    private static readonly TimeZoneInfo _zonaHoraria =
-    TimeZoneInfo.FindSystemTimeZoneById("America/Monterrey");
+    private static readonly TimeSpan _offsetMexico = TimeSpan.FromHours(-6);
 
     public AdminService(RoclandDbContext db) => _db = db;
 
     // ── KPIs ───────────────────────────────────────────────────────────
     public async Task<DashboardKpiDto> ObtenerKpisAsync()
     {
-        // 1. Obtener qué día es "hoy" en Torreón
-        var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _zonaHoraria);
+        // 1. Obtener qué día es "hoy" con el offset fijo
+        var ahoraLocal = DateTime.UtcNow.Add(_offsetMexico);
         var hoyLocal = ahoraLocal.Date;
 
-        // 2. Traducir ese día a un rango de horas UTC para poder buscar en la DB
-        var inicioDiaUtc = TimeZoneInfo.ConvertTimeToUtc(hoyLocal, _zonaHoraria);
+        // 2. Traducir ese día a un rango de horas UTC para buscar en la DB
+        // Sumamos 6 horas para regresar la medianoche local a UTC
+        var inicioDiaUtc = hoyLocal.AddHours(6);
         var finDiaUtc = inicioDiaUtc.AddDays(1);
 
         var dentroAhora = await _db.RegistrosVisitantes
@@ -232,8 +232,8 @@ public class AdminService : IAdminService
 
         var items = itemsUtc.Select(r => new HistorialAccesoDto(
             r.Id, r.Tipo, r.Nombre, r.Empresa, r.NumeroIdentificacion, r.Area, r.Motivo,
-            TimeZoneInfo.ConvertTimeFromUtc(r.FechaEntrada, _zonaHoraria),
-            r.FechaSalida.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(r.FechaSalida.Value, _zonaHoraria) : null,
+            r.FechaEntrada.Add(_offsetMexico), // <-- Cambio aquí
+            r.FechaSalida.HasValue ? r.FechaSalida.Value.Add(_offsetMexico) : null, // <-- Cambio aquí
             r.MinutosEstancia, r.EstadoAcceso, r.CodigoGafete, r.Guardia
         )).ToList();
 
