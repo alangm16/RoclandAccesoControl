@@ -11,6 +11,7 @@ public interface IAccesoService
     Task<IEnumerable<SolicitudPendienteResponse>> ObtenerSolicitudesPendientesAsync();
     Task<SolicitudPendienteResponse?> ObtenerSolicitudPorIdAsync(int solicitudId);
     Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync();
+    Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosZonaAsync();
     Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request);
     Task<bool> RechazarSolicitudAsync(RechazarSolicitudRequest request);
     Task<bool> MarcarSalidaAsync(MarcarSalidaRequest request);

@@ -346,46 +346,46 @@ public class AccesoService : IAccesoService
         return respuestas.OrderByDescending(r => r.FechaEntrada);
     }
 
-    //public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosAsync()
-    //{
-    //    var respuestas = new List<AccesoActivoResponse>();
-    //    var ahoraServidor = DateTime.UtcNow;
+    public async Task<IEnumerable<AccesoActivoResponse>> ObtenerAccesosActivosZonaAsync()
+    {
+        var respuestas = new List<AccesoActivoResponse>();
+        var ahoraServidor = DateTime.UtcNow;
 
-    //    var visitantes = await _db.RegistrosVisitantes
-    //        .Include(r => r.Persona)
-    //        .Include(r => r.Area)
-    //        .Include(r => r.Gafete)
-    //        .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
-    //        .ToListAsync();
-    //    respuestas.AddRange(visitantes.Select(v => new AccesoActivoResponse(
-    //        RegistroId: v.Id,
-    //        TipoRegistro: "Visitante",
-    //        NombrePersona: v.Persona.Nombre,
-    //        Empresa: v.Persona.Empresa,
-    //        NumeroGafete: v.Gafete?.Codigo ?? "",       // <-- Código del gafete
-    //        FechaEntrada: TimeZoneInfo.ConvertTimeFromUtc(v.FechaEntrada, _zonaHoraria),
-    //        Area: v.Area.Nombre,
-    //        MinutosLlevaDentro: (ahoraServidor - v.FechaEntrada).TotalMinutes
-    //    )));
+        var visitantes = await _db.RegistrosVisitantes
+            .Include(r => r.Persona)
+            .Include(r => r.Area)
+            .Include(r => r.Gafete)
+            .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+            .ToListAsync();
+        respuestas.AddRange(visitantes.Select(v => new AccesoActivoResponse(
+            RegistroId: v.Id,
+            TipoRegistro: "Visitante",
+            NombrePersona: v.Persona.Nombre,
+            Empresa: v.Persona.Empresa,
+            NumeroGafete: v.Gafete?.Codigo ?? "",       // <-- Código del gafete
+            FechaEntrada: TimeZoneInfo.ConvertTimeFromUtc(v.FechaEntrada, _zonaHoraria),
+            Area: v.Area.Nombre,
+            MinutosLlevaDentro: (ahoraServidor - v.FechaEntrada).TotalMinutes
+        )));
 
-    //    var proveedores = await _db.RegistrosProveedores
-    //        .Include(r => r.Persona)
-    //        .Include(r => r.Gafete)
-    //         .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
-    //         .ToListAsync();
-    //    respuestas.AddRange(proveedores.Select(p => new AccesoActivoResponse(
-    //        RegistroId: p.Id,
-    //        TipoRegistro: "Proveedor",
-    //        NombrePersona: p.Persona.Nombre,
-    //        Empresa: p.Persona.Empresa,
-    //        NumeroGafete: p.Gafete?.Codigo ?? "",
-    //        FechaEntrada: TimeZoneInfo.ConvertTimeFromUtc(p.FechaEntrada, _zonaHoraria),
-    //        Area: "N/A",
-    //        MinutosLlevaDentro: (ahoraServidor - p.FechaEntrada).TotalMinutes
-    //    )));
+        var proveedores = await _db.RegistrosProveedores
+            .Include(r => r.Persona)
+            .Include(r => r.Gafete)
+             .Where(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+             .ToListAsync();
+        respuestas.AddRange(proveedores.Select(p => new AccesoActivoResponse(
+            RegistroId: p.Id,
+            TipoRegistro: "Proveedor",
+            NombrePersona: p.Persona.Nombre,
+            Empresa: p.Persona.Empresa,
+            NumeroGafete: p.Gafete?.Codigo ?? "",
+            FechaEntrada: TimeZoneInfo.ConvertTimeFromUtc(p.FechaEntrada, _zonaHoraria),
+            Area: "N/A",
+            MinutosLlevaDentro: (ahoraServidor - p.FechaEntrada).TotalMinutes
+        )));
 
-    //    return respuestas.OrderByDescending(r => r.FechaEntrada);
-    //}
+        return respuestas.OrderByDescending(r => r.FechaEntrada);
+    }
 
     public async Task<bool> AprobarSolicitudAsync(AprobarSolicitudRequest request)
     {

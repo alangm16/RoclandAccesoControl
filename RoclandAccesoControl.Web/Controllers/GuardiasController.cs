@@ -34,6 +34,13 @@ public class GuardiasController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("activosZona")]
+    public async Task<IActionResult> ObtenerActivosZona()
+    {
+        var result = await _acceso.ObtenerAccesosActivosZonaAsync();
+        return Ok(result);
+    }
+
     [HttpGet("gafetes/disponibles")]
     public async Task<IActionResult> ObtenerGafetesDisponibles()
     {
