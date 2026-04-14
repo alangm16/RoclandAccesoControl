@@ -309,58 +309,74 @@
     }
 
     // ── Gráfica: Flujo diario del mes ───────────────────────────────────────
-    let chartMes = null;
-    async function cargarGraficaMes() {
-        const anio = document.getElementById('selAnio').value;
-        const mes = document.getElementById('selMes').value;
-        if (!anio || !mes) return;
+        let chartMes = null;
+        async function cargarGraficaMes() {
+            const anio = document.getElementById('selAnio').value;
+            const mes = document.getElementById('selMes').value;
+            if (!anio || !mes) return;
 
-        try {
-            const r = await fetch(`/api/admin/flujo/diario?anio=${anio}&mes=${mes}`, { headers: authHeader() });
-            if (!r.ok) return;
-            const data = await r.json();
+            try {
+                // Asegúrate de usar la ruta correcta que arreglamos en el paso anterior
+                const r = await fetch(`/api/admin/flujo/diario?anio=${anio}&mes=${mes}`, { headers: authHeader() });
+                if (!r.ok) return;
+                const data = await r.json();
 
-                    // Usamos 'fecha' para las etiquetas de abajo (eje X)
-        const labels = data.map(d => d.fecha);
+                // 1. Usar 'fecha' para el eje X
+                const labels = data.map(d => d.fecha);
+            
+                // 2. Extraer los valores por separado
+                const valoresVisitantes = data.map(d => d.visitantes);
+                const valoresProveedores = data.map(d => d.proveedores);
 
-        // Sumamos 'visitantes' y 'proveedores' para obtener el total del día (eje Y)
-        const valores = data.map(d => d.visitantes + d.proveedores);
-
-            if (chartMes) {
-                chartMes.data.labels = labels;
-                chartMes.data.datasets[0].data = valores;
-                chartMes.update('none');
-            } else {
-                const ctx = document.getElementById('chartMes').getContext('2d');
-                chartMes = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label: 'Accesos por día',
-                            data: valores,
-                            borderColor: colores.green,
-                            backgroundColor: colores.green + '22',
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: colores.green,
-                            pointRadius: 3,
-                            pointHoverRadius: 5,
-                        }]
-                    },
-                    options: {
-                        ...chartDefaults,
-                        plugins: {
-                            ...chartDefaults.plugins,
-                            legend: { display: false }
+                if (chartMes) {
+                    chartMes.data.labels = labels;
+                    chartMes.data.datasets[0].data = valoresVisitantes;
+                    chartMes.data.datasets[1].data = valoresProveedores;
+                    chartMes.update('none');
+                } else {
+                    const ctx = document.getElementById('chartMes').getContext('2d');
+                    chartMes = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    label: 'Visitantes',
+                                    data: valoresVisitantes,
+                                    borderColor: colores.accent, // Azul (Visitantes)
+                                    backgroundColor: colores.accent + '22',
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointBackgroundColor: colores.accent,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 5,
+                                },
+                                {
+                                    label: 'Proveedores',
+                                    data: valoresProveedores,
+                                    borderColor: colores.purple, // Morado (Proveedores)
+                                    backgroundColor: colores.purple + '22',
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointBackgroundColor: colores.purple,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 5,
+                                }
+                            ]
+                        },
+                        options: {
+                            ...chartDefaults,
+                            plugins: {
+                                ...chartDefaults.plugins,
+                                legend: { display: true } // Mostrar leyenda para distinguir las líneas
+                            }
                         }
-                    }
-                });
+                    });
+                }
+            } catch (e) {
+                console.warn('Error cargando gráfica mes:', e);
             }
-        } catch (e) {
-            console.warn('Error cargando gráfica mes:', e);
         }
-    }
 
     // ── Selectores de Año/Mes ────────────────────────────────────────────────
     function initSelectores() {
