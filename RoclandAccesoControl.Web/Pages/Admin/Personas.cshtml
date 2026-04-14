@@ -82,6 +82,17 @@
 
 @section Scripts {
     <script>
+
+        function fmtDuracion(minutos) {
+            if (minutos === null || minutos === undefined) return '—';
+            const m = parseInt(minutos);
+            if (isNaN(m)) return '—';
+            if (m < 60) return `${m} m`;
+            const h = Math.floor(m / 60);
+            const rest = m % 60;
+            return rest === 0 ? `${h} h` : `${h} h ${rest} m`;
+        }
+
         function fmtDT(iso) {
             if (!iso) return '—';
             return new Date(iso).toLocaleString('es-MX',
@@ -220,7 +231,7 @@
                             <td>${h.motivo}</td>
                             <td class="text-mono" style="font-size:12px;">${fmtDT(h.fechaEntrada)}</td>
                             <td class="text-mono" style="font-size:12px;">${h.fechaSalida ? fmtDT(h.fechaSalida) : '—'}</td>
-                            <td class="text-mono">${h.minutosEstancia ?? '—'}</td>
+                            <td class="text-mono">${fmtDuracion(h.minutosEstancia)}</td>
                             <td>${estadoBadge(h.estadoAcceso)}</td>
                         </tr>`).join('')
                     : '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:16px;">Sin historial.</td></tr>';

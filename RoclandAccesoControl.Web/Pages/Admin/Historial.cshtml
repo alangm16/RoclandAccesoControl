@@ -64,6 +64,16 @@
     <script>
         let pagina = 1, totalPaginas = 1;
 
+        function fmtDuracion(minutos) {
+            if (minutos === null || minutos === undefined) return '—';
+            const m = parseInt(minutos);
+            if (isNaN(m)) return '—';
+            if (m < 60) return `${m} m`;
+            const h = Math.floor(m / 60);
+            const rest = m % 60;
+            return rest === 0 ? `${h} h` : `${h} h ${rest} m`;
+        }
+
         function estadoBadge(estado) {
             const map = {
                 'Aprobado': 'green', 'Salido': 'green',
@@ -122,7 +132,7 @@
                     <td>${r.motivo}</td>
                     <td class="text-mono" style="font-size:12px;">${fmtDT(r.fechaEntrada)}</td>
                     <td class="text-mono" style="font-size:12px;">${r.fechaSalida ? fmtDT(r.fechaSalida) : '—'}</td>
-                    <td class="text-mono">${r.minutosEstancia ?? '—'}</td>
+                    <td class="text-mono">${fmtDuracion(r.minutosEstancia)}</td>
                     <td>${estadoBadge(r.estadoAcceso)}</td>
                     <td class="text-mono">${r.codigoGafete || '—'}</td>
                     <td class="text-muted">${r.guardia}</td>
