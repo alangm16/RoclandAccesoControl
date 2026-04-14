@@ -20,21 +20,16 @@ public class AdminService : IAdminService
     // ── KPIs ───────────────────────────────────────────────────────────
     public async Task<DashboardKpiDto> ObtenerKpisAsync()
     {
-        // 1. Obtener qué día es "hoy" con el offset fijo
         var ahoraLocal = DateTime.UtcNow.Add(_offsetMexico);
         var hoyLocal = ahoraLocal.Date;
-
-        // 2. Traducir ese día a un rango de horas UTC para buscar en la DB
-        // Sumamos 6 horas para regresar la medianoche local a UTC
-        var inicioDiaUtc = hoyLocal.AddHours(6);
+        var inicioDiaUtc = hoyLocal.AddHours(6); // UTC exacto de la medianoche local
         var finDiaUtc = inicioDiaUtc.AddDays(1);
 
         var dentroAhora = await _db.RegistrosVisitantes
-        .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
-        + await _db.RegistrosProveedores
-        .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null);
+            .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null)
+            + await _db.RegistrosProveedores
+            .CountAsync(r => r.EstadoAcceso == "Aprobado" && r.FechaSalida == null);
 
-        // 3. Usar el rango UTC para filtrar de manera exacta en la Base de Datos
         var visitantesHoy = await _db.RegistrosVisitantes
             .CountAsync(r => r.FechaEntrada >= inicioDiaUtc && r.FechaEntrada < finDiaUtc);
 
@@ -44,18 +39,22 @@ public class AdminService : IAdminService
         var pendientes = await _db.SolicitudesPendientes
             .CountAsync(s => s.Estado == "Pendiente");
 
-        var minutosVis = await _db.RegistrosVisitantes
-            .Where(r => r.FechaEntrada.Date == inicioDiaUtc && r.MinutosEstancia != null)
-            .Select(r => (double)r.MinutosEstancia!.Value)
+        // Se calcula dinámicamente para que lea de inmediato los 14 registros que ya tienes
+        var tiemposVis = await _db.RegistrosVisitantes
+            .Where(r => r.FechaEntrada >= inicioDiaUtc && r.FechaEntrada < finDiaUtc && r.FechaSalida != null)
+            .Select(r => new { r.FechaEntrada, r.FechaSalida })
             .ToListAsync();
 
-        var minutosProv = await _db.RegistrosProveedores
-            .Where(r => r.FechaEntrada.Date == inicioDiaUtc && r.MinutosEstancia != null)
-            .Select(r => (double)r.MinutosEstancia!.Value)
+        var tiemposProv = await _db.RegistrosProveedores
+            .Where(r => r.FechaEntrada >= inicioDiaUtc && r.FechaEntrada < finDiaUtc && r.FechaSalida != null)
+            .Select(r => new { r.FechaEntrada, r.FechaSalida })
             .ToListAsync();
 
-        var todos = minutosVis.Concat(minutosProv).ToList();
-        var promedio = todos.Count > 0 ? todos.Average() : 0;
+        var todosLosMinutos = tiemposVis.Concat(tiemposProv)
+            .Select(x => (x.FechaSalida!.Value - x.FechaEntrada).TotalMinutes)
+            .ToList();
+
+        var promedio = todosLosMinutos.Count > 0 ? todosLosMinutos.Average() : 0;
 
         return new DashboardKpiDto(
             dentroAhora,
@@ -68,71 +67,90 @@ public class AdminService : IAdminService
 
     public async Task<IEnumerable<FlujoPorHoraDto>> ObtenerFlujoPorHoraHoyAsync()
     {
-        var hoy = DateTime.UtcNow.Date;
+        var ahoraLocal = DateTime.UtcNow.Add(_offsetMexico);
+        var hoyLocal = ahoraLocal.Date;
+        var inicioDiaUtc = hoyLocal.AddHours(6);
+        var finDiaUtc = inicioDiaUtc.AddDays(1);
 
-        var vis = await _db.RegistrosVisitantes
-            .Where(r => r.FechaEntrada.Date == hoy)
-            .GroupBy(r => r.FechaEntrada.Hour)
-            .Select(g => new { Hora = g.Key, Total = g.Count() })
+        // Traemos las fechas a memoria para convertirlas a hora de Torreón correctamente
+        var visFechas = await _db.RegistrosVisitantes
+            .Where(r => r.FechaEntrada >= inicioDiaUtc && r.FechaEntrada < finDiaUtc)
+            .Select(r => r.FechaEntrada)
             .ToListAsync();
 
-        var prov = await _db.RegistrosProveedores
-            .Where(r => r.FechaEntrada.Date == hoy)
-            .GroupBy(r => r.FechaEntrada.Hour)
-            .Select(g => new { Hora = g.Key, Total = g.Count() })
+        var provFechas = await _db.RegistrosProveedores
+            .Where(r => r.FechaEntrada >= inicioDiaUtc && r.FechaEntrada < finDiaUtc)
+            .Select(r => r.FechaEntrada)
             .ToListAsync();
+
+        var visAgrupados = visFechas
+            .GroupBy(f => f.Add(_offsetMexico).Hour)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var provAgrupados = provFechas
+            .GroupBy(f => f.Add(_offsetMexico).Hour)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         return Enumerable.Range(6, 16) // 06:00 - 21:00
             .Select(h => new FlujoPorHoraDto(h,
-                (vis.FirstOrDefault(v => v.Hora == h)?.Total ?? 0) +
-                (prov.FirstOrDefault(p => p.Hora == h)?.Total ?? 0)));
+                visAgrupados.GetValueOrDefault(h, 0) +
+                provAgrupados.GetValueOrDefault(h, 0)));
     }
 
     public async Task<IEnumerable<FlujoDiarioDto>> ObtenerFlujoDiarioMesAsync(int anio, int mes)
     {
-        var vis = await _db.RegistrosVisitantes
-            .Where(r => r.FechaEntrada.Year == anio && r.FechaEntrada.Month == mes)
-            .GroupBy(r => r.FechaEntrada.Date)
-            .Select(g => new { Fecha = g.Key, Total = g.Count() })
+        var inicioMesLocal = new DateTime(anio, mes, 1);
+        var finMesLocal = inicioMesLocal.AddMonths(1);
+        var inicioMesUtc = inicioMesLocal.AddHours(6);
+        var finMesUtc = finMesLocal.AddHours(6);
+
+        var visFechas = await _db.RegistrosVisitantes
+            .Where(r => r.FechaEntrada >= inicioMesUtc && r.FechaEntrada < finMesUtc)
+            .Select(r => r.FechaEntrada)
             .ToListAsync();
 
-        var prov = await _db.RegistrosProveedores
-            .Where(r => r.FechaEntrada.Year == anio && r.FechaEntrada.Month == mes)
-            .GroupBy(r => r.FechaEntrada.Date)
-            .Select(g => new { Fecha = g.Key, Total = g.Count() })
+        var provFechas = await _db.RegistrosProveedores
+            .Where(r => r.FechaEntrada >= inicioMesUtc && r.FechaEntrada < finMesUtc)
+            .Select(r => r.FechaEntrada)
             .ToListAsync();
+
+        var visAgrupados = visFechas
+            .GroupBy(f => f.Add(_offsetMexico).Date)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var provAgrupados = provFechas
+            .GroupBy(f => f.Add(_offsetMexico).Date)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         var diasEnMes = DateTime.DaysInMonth(anio, mes);
         return Enumerable.Range(1, diasEnMes).Select(d =>
         {
-            var fecha = new DateTime(anio, mes, d);
+            var fechaLocal = new DateTime(anio, mes, d);
             return new FlujoDiarioDto(
-                fecha.ToString("dd/MM"),
-                vis.FirstOrDefault(v => v.Fecha == fecha)?.Total ?? 0,
-                prov.FirstOrDefault(p => p.Fecha == fecha)?.Total ?? 0);
+                fechaLocal.ToString("dd/MM"),
+                visAgrupados.GetValueOrDefault(fechaLocal, 0),
+                provAgrupados.GetValueOrDefault(fechaLocal, 0));
         });
     }
 
     public async Task<IEnumerable<AreaVisitadaDto>> ObtenerAreasMasVisitadasAsync(int dias = 30)
     {
-        var desde = DateTime.UtcNow.Date.AddDays(-dias);
+        var ahoraLocal = DateTime.UtcNow.Add(_offsetMexico);
+        var desdeUtc = ahoraLocal.Date.AddDays(-dias).AddHours(6); // UTC exacto del inicio del día local
 
-        // Obtener los top AreaId con su conteo
         var topAreas = await _db.RegistrosVisitantes
-            .Where(r => r.FechaEntrada >= desde)
+            .Where(r => r.FechaEntrada >= desdeUtc)
             .GroupBy(r => r.AreaId)
             .Select(g => new { AreaId = g.Key, Total = g.Count() })
             .OrderByDescending(x => x.Total)
             .Take(8)
             .ToListAsync();
 
-        // Obtener los nombres de las áreas correspondientes
         var areaIds = topAreas.Select(x => x.AreaId).ToList();
         var areasDict = await _db.Areas
             .Where(a => areaIds.Contains(a.Id))
             .ToDictionaryAsync(a => a.Id, a => a.Nombre);
 
-        // Construir el resultado en memoria
         return topAreas.Select(x => new AreaVisitadaDto(
             areasDict.GetValueOrDefault(x.AreaId, "Desconocido"),
             x.Total
