@@ -217,7 +217,7 @@
     let chartHoras = null;
     async function cargarGraficaHoras() {
         try {
-            const r = await fetch('/api/admin/grafica/horas', { headers: authHeader() });
+            const r = await fetch('/api/admin/flujo/horas', { headers: authHeader() });
             if (!r.ok) return;
             const data = await r.json();
 
@@ -261,8 +261,7 @@
     let chartAreas = null;
     async function cargarGraficaAreas() {
         try {
-            const r = await fetch('/api/admin/grafica/areas', { headers: authHeader() });
-            if (!r.ok) return;
+            const r = await fetch('/api/admin/areas/ranking', { headers: authHeader() });
             const data = await r.json();
 
             const labels = data.map(d => d.area);
@@ -317,7 +316,7 @@
         if (!anio || !mes) return;
 
         try {
-            const r = await fetch(`/api/admin/grafica/mes?anio=${anio}&mes=${mes}`, { headers: authHeader() });
+            const r = await fetch(`/api/admin/flujo/diario?anio=${anio}&mes=${mes}`, { headers: authHeader() });
             if (!r.ok) return;
             const data = await r.json();
 
