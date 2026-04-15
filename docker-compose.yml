@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      # Exponemos la app en el puerto 5000 del servidor hacia el 8080 del contenedor
+      - "5000:8080"
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
