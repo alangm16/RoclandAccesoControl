@@ -1,0 +1,23 @@
+name: Rocland CI/CD Deploy
+
+on:
+  push:
+    branches:
+      - master # OJO: Si tu rama principal se llama 'master', cámbialo aquí
+
+jobs:
+  deploy:
+    runs-on: self-hosted # Esto le dice a GitHub que use tu Windows Server 2022
+
+    steps:
+      - name: 1. Descargar el código más reciente
+        uses: actions/checkout@v4
+
+      - name: 2. Detener versión anterior (si existe)
+        run: docker-compose down
+
+      - name: 3. Construir y levantar nueva versión
+        run: docker-compose up -d --build
+
+      - name: 4. Limpiar imágenes viejas (para no llenar el disco del servidor)
+        run: docker image prune -f
