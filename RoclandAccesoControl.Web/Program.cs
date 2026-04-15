@@ -12,6 +12,7 @@ using System.Threading.RateLimiting;
 using Serilog;
 using Serilog.Events;
 using QuestPDF.Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -140,6 +141,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Configuración para Proxy Inverso (Caddy)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // IMPORTANTE: Como estamos en una red interna de Docker, limpiamos las redes conocidas
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+
 // ── Servicios de la app ────────────────────────────────────────────────
 builder.Services.AddScoped<IAccesoService, AccesoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -190,6 +201,8 @@ builder.Services.AddRateLimiter(options =>
 QuestPDF.Settings.License = LicenseType.Community;
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 // ── Middleware pipeline ────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
