@@ -6,8 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      # Exponemos la app en el puerto 5000 del servidor hacia el 8080 del contenedor
       - "5000:8080"
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      # Inyectamos el archivo de secretos del servidor hacia la app en el contenedor
+      - type: bind
+        source: C:\RoclandConfig\appsettings.Secrets.json
+        target: C:\app\appsettings.Secrets.json
+        read_only: true
