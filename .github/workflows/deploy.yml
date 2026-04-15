@@ -16,15 +16,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 2. Detener versión anterior
-        # Cambiado de docker-compose a docker compose
-        run: docker compose down
+        # Volvemos a usar docker-compose con guion
+        run: docker-compose down
         continue-on-error: true 
 
       - name: 3. Construir y levantar nueva versión
-        # Cambiado de docker-compose a docker compose
-        run: docker compose up -d --build
+        # Usamos docker-compose y el flag -d que ya debería funcionar
+        run: docker-compose up -d --build
 
       - name: 4. Limpiar imágenes viejas
-        # Cambiado de docker-compose a docker compose
+        # El comando de limpieza de imágenes es de docker (sin compose)
         run: docker image prune -f
         continue-on-error: true
