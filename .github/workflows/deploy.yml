@@ -3,21 +3,28 @@ name: Rocland CI/CD Deploy
 on:
   push:
     branches:
-      - master # OJO: Si tu rama principal se llama 'master', cámbialo aquí
+      - master
+      - main
+  workflow_dispatch: 
 
 jobs:
   deploy:
-    runs-on: self-hosted # Esto le dice a GitHub que use tu Windows Server 2022
+    runs-on: self-hosted
 
     steps:
       - name: 1. Descargar el código más reciente
         uses: actions/checkout@v4
 
-      - name: 2. Detener versión anterior (si existe)
+      - name: 2. Detener versión anterior
+        # Volvemos a usar docker-compose con guion
         run: docker-compose down
+        continue-on-error: true 
 
       - name: 3. Construir y levantar nueva versión
+        # Usamos docker-compose y el flag -d que ya debería funcionar
         run: docker-compose up -d --build
 
-      - name: 4. Limpiar imágenes viejas (para no llenar el disco del servidor)
+      - name: 4. Limpiar imágenes viejas
+        # El comando de limpieza de imágenes es de docker (sin compose)
         run: docker image prune -f
+        continue-on-error: true
