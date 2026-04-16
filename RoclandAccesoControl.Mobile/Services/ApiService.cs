@@ -25,11 +25,20 @@ public class ApiService
     public ApiService(AuthStateService auth)
     {
         _auth = auth;
-        var handler = new HttpClientHandler
+        HttpMessageHandler handler;
+
+#if ANDROID
+        handler = new Xamarin.Android.Net.AndroidMessageHandler
         {
-            // En desarrollo aceptamos certificados autofirmados
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         };
+#else
+    handler = new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+    };
+#endif
+
         _http = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl) };
     }
 

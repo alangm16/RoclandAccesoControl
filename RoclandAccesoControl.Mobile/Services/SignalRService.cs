@@ -36,13 +36,21 @@ public class SignalRService : IAsyncDisposable
         _connection = new HubConnectionBuilder()
             .WithUrl(hubUrl, options =>
             {
-                options.AccessTokenProvider = () =>
-                    Task.FromResult<string?>(_auth.Token);
+                options.AccessTokenProvider = () => Task.FromResult<string?>(_auth.Token);
 
-                // Aceptar certificados autofirmados en desarrollo
-                options.HttpMessageHandlerFactory = _ => new HttpClientHandler
+                options.HttpMessageHandlerFactory = _ =>
+                {
+#if ANDROID
+                    return new Xamarin.Android.Net.AndroidMessageHandler
+                    {
+                        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                    };
+#else
+                return new HttpClientHandler
                 {
                     ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+                };
+#endif
                 };
             })
             .WithAutomaticReconnect(new[]
