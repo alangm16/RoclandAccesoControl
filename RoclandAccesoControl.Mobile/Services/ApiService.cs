@@ -25,21 +25,38 @@ public class ApiService
     public ApiService(AuthStateService auth)
     {
         _auth = auth;
-        HttpMessageHandler handler;
 
-#if ANDROID
-        handler = new Xamarin.Android.Net.AndroidMessageHandler
+        // Utilizamos SocketsHttpHandler para tener control total sobre el ciclo de vida de los sockets TCP
+        var handler = new SocketsHttpHandler
         {
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-        };
-#else
-    handler = new HttpClientHandler
-    {
-        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-    };
-#endif
+            // 1. Si la conexión lleva 30 segundos sin usarse, se cierra automáticamente.
+            // Esto evita usar un socket "zombie" que se quedó colgado al suspender la VM.
+            PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30),
 
-        _http = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl) };
+            // 2. Fuerza a crear una conexión totalmente nueva cada 2 minutos como máximo, 
+            // renovando el estado de la red.
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+
+            // 3. Envía pings internos para verificar si el servidor sigue vivo a nivel TCP
+            KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(10),
+
+            // 4. Ignora errores de certificado SSL (equivalente a lo que ya tenías para desarrollo local)
+            SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+            {
+                RemoteCertificateValidationCallback = (sender, cert, chain, errors) => true
+            }
+        };
+
+        _http = new HttpClient(handler)
+        {
+            BaseAddress = new Uri(BaseUrl),
+
+            // El timeout por defecto de HttpClient es de 100 segundos.
+            // Lo reducimos a 15 segundos para que, si la VM está apagada, 
+            // la app no se quede "congelada" cargando por minuto y medio antes de dar el error.
+            Timeout = TimeSpan.FromSeconds(15)
+        };
     }
 
     // ── Auth ───────────────────────────────────────────────────────────
